@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #FAFAF5;
+  /* Cream White */
+  --foreground: #4A4E69;
+  /* Charcoal Grey */
+
+  --primary: #FFAFCC;
+  /* Soft Pink */
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #FFF1E6;
+  /* Pale Gold/Cream */
+  --secondary-foreground: #4A4E69;
+
+  --accent: #E2B065;
+  /* Soft Gold */
+  --accent-foreground: #FFFFFF;
+
+  --muted: #FDE2E4;
+  /* Pale Pink */
+  --muted-foreground: #9A8C98;
+
+  --card: #FFFFFF;
+  --card-foreground: #4A4E69;
+
+  --border: #FAD2E1;
+  /* Soft Pink Border */
+  --input: #FFFFFF;
+  --ring: #FFAFCC;
+
+  --radius: 1.5rem;
+  /* Softer corners */
+}
+
+
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+
+/* Utility Classes for Malay Aesthetic */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+/* Premium Batik Pattern */
+.bg-batik-pattern {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D4AF37' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+
+
+/* Gradient Text */
+/* Gradient Text */
+/* Gradient Text */
+.text-gradient-accent {
+  background: linear-gradient(135deg, #E2B065 0%, #FAD5A5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-primary {
+  background: linear-gradient(135deg, #FFAFCC 0%, #FFC8DD 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
