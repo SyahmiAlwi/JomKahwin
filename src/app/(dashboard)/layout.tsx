@@ -65,8 +65,6 @@ export default function DashboardLayout({
                     <MobileSidebar
                         isOpen={sidebarOpen}
                         onClose={() => setSidebarOpen(false)}
-                        userName="Cami ❤️ Cira"
-                        userInitial="S"
                         isHoverMode={true}
                     />
                 </div>
@@ -77,8 +75,6 @@ export default function DashboardLayout({
                 <MobileSidebar
                     isOpen={clickSidebarOpen}
                     onClose={() => setClickSidebarOpen(false)}
-                    userName="Cami ❤️ Cira"
-                    userInitial="S"
                     isHoverMode={false}
                 />
             </div>

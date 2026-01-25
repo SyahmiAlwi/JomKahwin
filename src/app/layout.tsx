@@ -34,6 +34,7 @@ export const viewport: Viewport = {
 };
 
 import QueryProvider from "@/components/providers/query-provider";
+import { UserProvider } from "@/components/providers/user-provider";
 import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -47,8 +48,10 @@ export default function RootLayout({
       <body className={clsx(cinzel.variable, nunito.variable, "antialiased font-body bg-background text-foreground")}>
         <QueryProvider>
           <ToastProvider>
-            {children}
-            <Toaster />
+            <UserProvider>
+              {children}
+              <Toaster />
+            </UserProvider>
           </ToastProvider>
         </QueryProvider>
       </body>

@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Wallet, TrendingUp, DollarSign, ShoppingBag, Coffee, Camera, Music } from "lucide-react";
+import { Plus, Wallet, TrendingUp, DollarSign, ShoppingBag, Coffee, Camera, Music, ArrowUpCircle, History } from "lucide-react";
 
 // Mock Data
 const initialExpenses = [
@@ -17,26 +17,83 @@ const initialExpenses = [
     { id: 4, category: "Hiburan", amount: 800, total: 1000, icon: Music, color: "text-orange-500 bg-orange-100" },
 ];
 
+const initialFunds = [
+    { id: 1, source: "Simpanan Sendiri", amount: 10000, date: "2023-10-01" },
+    { id: 2, source: "Ibu Bapa", amount: 10000, date: "2023-11-15" },
+    { id: 3, source: "Simpanan Bulanan (Dis)", amount: 5000, date: "2023-12-30" },
+];
+
+type DialogMode = "expense" | "fund";
+
 export default function BudgetPage() {
     const [expenses, setExpenses] = useState(initialExpenses);
+    const [funds, setFunds] = useState(initialFunds);
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState<DialogMode>("expense");
+
     const [newExpense, setNewExpense] = useState({ category: "", amount: "", total: "" });
+    const [newFund, setNewFund] = useState({ source: "", amount: "" });
+
     const { toast } = useToast();
-    const totalBudget = 25000;
+
+    // Calculations
+    const totalBudget = funds.reduce((acc, curr) => acc + curr.amount, 0);
     const totalSpent = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const percentage = Math.round((totalSpent / totalBudget) * 100);
+    const percentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+    const remainingBudget = totalBudget - totalSpent;
+
+    const openDialog = (mode: DialogMode) => {
+        setDialogMode(mode);
+        setIsDialogOpen(true);
+    };
+
+    const handleAddExpense = () => {
+        const newId = Math.max(...expenses.map(e => e.id), 0) + 1;
+        setExpenses([...expenses, {
+            id: newId,
+            category: newExpense.category,
+            amount: parseInt(newExpense.amount) || 0,
+            total: parseInt(newExpense.total) || 0,
+            icon: DollarSign,
+            color: "text-blue-500 bg-blue-100"
+        }]);
+        toast({ title: "Berjaya!", description: "Perbelanjaan baru ditambah.", variant: "success" });
+        setNewExpense({ category: "", amount: "", total: "" });
+        setIsDialogOpen(false);
+    };
+
+    const handleAddFund = () => {
+        const newId = Math.max(...funds.map(f => f.id), 0) + 1;
+        setFunds([...funds, {
+            id: newId,
+            source: newFund.source,
+            amount: parseInt(newFund.amount) || 0,
+            date: new Date().toISOString().split('T')[0]
+        }]);
+        toast({ title: "Berjaya!", description: "Dana baru ditambah.", variant: "success" });
+        setNewFund({ source: "", amount: "" });
+        setIsDialogOpen(false);
+    };
 
     return (
         <div className="space-y-8 pb-24">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-heading font-bold text-foreground">Bajet Majlis</h1>
-                    <p className="text-muted-foreground">Urus kewangan majlis anda dengan bijak.</p>
+                    <h1 className="text-3xl font-heading font-bold text-foreground">Bajet & Tabung</h1>
+                    <p className="text-muted-foreground">Urus dana perkahwinan dan perbelanjaan anda.</p>
                 </div>
-                <Button onClick={() => setIsDialogOpen(true)} size="icon" className="rounded-full h-12 w-12 bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90">
-                    <Plus className="h-6 w-6" />
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={() => openDialog("fund")} className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/25">
+                        <ArrowUpCircle className="h-4 w-4 mr-2" />
+                        Tambah Dana
+                    </Button>
+                    <Button onClick={() => openDialog("expense")} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tambah Belanja
+                    </Button>
+                </div>
             </div>
 
             {/* Visual Summary Card */}
@@ -52,13 +109,19 @@ export default function BudgetPage() {
 
                     <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                         <div className="space-y-2">
-                            <p className="text-primary-foreground/80 font-medium">Baki Bajet</p>
+                            <p className="text-primary-foreground/80 font-medium">Tabung Kahwin (Terkumpul)</p>
                             <h2 className="text-5xl font-bold text-white tracking-tight">
-                                RM {(totalBudget - totalSpent).toLocaleString()}
+                                RM {totalBudget.toLocaleString()}
                             </h2>
-                            <div className="flex items-center gap-2 text-white/90 text-sm mt-2">
-                                <TrendingUp className="h-4 w-4" />
-                                <span>{100 - percentage}% masih ada untuk dibelanjakan</span>
+                            <div className="flex flex-col gap-1 text-white/90 text-sm mt-2">
+                                <div className="flex items-center gap-2">
+                                    <ShoppingBag className="h-4 w-4 opacity-75" />
+                                    <span>Belanja: RM {totalSpent.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2 font-bold">
+                                    <TrendingUp className="h-4 w-4" />
+                                    <span>Baki: RM {remainingBudget.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -99,93 +162,143 @@ export default function BudgetPage() {
                 </Card>
             </motion.div>
 
-            {/* Expense Categories */}
-            <div className="grid gap-4">
-                <h3 className="text-xl font-heading font-bold text-foreground">Kategori Perbelanjaan</h3>
-                {expenses.map((expense, index) => (
-                    <motion.div
-                        key={expense.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 + 0.3 }}
-                    >
-                        <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer border-border/50">
-                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${expense.color}`}>
-                                <expense.icon className="h-6 w-6" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-1">
-                                    <p className="font-bold text-foreground truncate">{expense.category}</p>
-                                    <p className="font-medium text-foreground">RM {expense.amount.toLocaleString()}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Expense Categories (Left 2/3) */}
+                <div className="lg:col-span-2 space-y-4">
+                    <h3 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
+                        <ShoppingBag className="h-5 w-5 text-primary" />
+                        Kategori Perbelanjaan
+                    </h3>
+                    {expenses.map((expense, index) => (
+                        <motion.div
+                            key={expense.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 + 0.3 }}
+                        >
+                            <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer border-border/50">
+                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${expense.color}`}>
+                                    <expense.icon className="h-6 w-6" />
                                 </div>
-                                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                                    <motion.div
-                                        className="bg-primary h-full rounded-full"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${(expense.amount / expense.total) * 100}%` }}
-                                        transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                                    />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <p className="font-bold text-foreground truncate">{expense.category}</p>
+                                        <p className="font-medium text-foreground">RM {expense.amount.toLocaleString()}</p>
+                                    </div>
+                                    <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                                        <motion.div
+                                            className="bg-primary h-full rounded-full"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${expense.total > 0 ? (expense.amount / expense.total) * 100 : 0}%` }}
+                                            transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                                        <span>{expense.total > 0 ? Math.round((expense.amount / expense.total) * 100) : 0}% digunakan</span>
+                                        <span>Daripada RM {expense.total.toLocaleString()}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                                    <span>{Math.round((expense.amount / expense.total) * 100)}% digunakan</span>
-                                    <span>Daripada RM {expense.total.toLocaleString()}</span>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Fund History (Right 1/3) */}
+                <div className="space-y-4">
+                    <h3 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
+                        <History className="h-5 w-5 text-accent" />
+                        Rekod Tabung
+                    </h3>
+                    <div className="space-y-3">
+                        {funds.map((fund, index) => (
+                            <motion.div
+                                key={fund.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 + 0.4 }}
+                            >
+                                <div className="bg-white p-4 rounded-xl border border-border/50 flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <p className="font-bold text-sm text-foreground">{fund.source}</p>
+                                        <p className="text-xs text-muted-foreground">{fund.date}</p>
+                                    </div>
+                                    <span className="text-accent-foreground font-bold text-sm bg-accent/90 px-2 py-1 rounded-md shadow-sm">
+                                        + RM {fund.amount.toLocaleString()}
+                                    </span>
                                 </div>
-                            </div>
-                        </Card>
-                    </motion.div>
-                ))}
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Add Expense Dialog */}
-            <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} title="Tambah Perbelanjaan">
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    const newId = Math.max(...expenses.map(e => e.id)) + 1;
-                    setExpenses([...expenses, {
-                        id: newId,
-                        category: newExpense.category,
-                        amount: parseInt(newExpense.amount),
-                        total: parseInt(newExpense.total),
-                        icon: DollarSign,
-                        color: "text-blue-500 bg-blue-100"
-                    }]);
-                    toast({ title: "Berjaya!", description: "Perbelanjaan baru ditambah.", variant: "success" });
-                    setNewExpense({ category: "", amount: "", total: "" });
-                    setIsDialogOpen(false);
-                }} className="space-y-4">
-                    <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Kategori</label>
-                        <Input
-                            value={newExpense.category}
-                            onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                            placeholder="Contoh: Hantaran"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Jumlah Dibelanjakan (RM)</label>
-                        <Input
-                            type="number"
-                            value={newExpense.amount}
-                            onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                            placeholder="0"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Bajet Keseluruhan (RM)</label>
-                        <Input
-                            type="number"
-                            value={newExpense.total}
-                            onChange={(e) => setNewExpense({ ...newExpense, total: e.target.value })}
-                            placeholder="0"
-                            required
-                        />
-                    </div>
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                        Tambah
-                    </Button>
-                </form>
+            {/* Dialog - Dynamic Content based on mode */}
+            <Dialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                title={dialogMode === "expense" ? "Tambah Perbelanjaan" : "Masuk Dana Tabung"}
+            >
+                {dialogMode === "expense" ? (
+                    <form onSubmit={(e) => { e.preventDefault(); handleAddExpense(); }} className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Kategori</label>
+                            <Input
+                                value={newExpense.category}
+                                onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
+                                placeholder="Contoh: Hantaran"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Jumlah Dibelanjakan (RM)</label>
+                            <Input
+                                type="number"
+                                value={newExpense.amount}
+                                onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                                placeholder="0"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Bajet Keseluruhan (RM)</label>
+                            <Input
+                                type="number"
+                                value={newExpense.total}
+                                onChange={(e) => setNewExpense({ ...newExpense, total: e.target.value })}
+                                placeholder="0"
+                                required
+                            />
+                        </div>
+                        <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                            Tambah Belanja
+                        </Button>
+                    </form>
+                ) : (
+                    <form onSubmit={(e) => { e.preventDefault(); handleAddFund(); }} className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Sumber Dana</label>
+                            <Input
+                                value={newFund.source}
+                                onChange={(e) => setNewFund({ ...newFund, source: e.target.value })}
+                                placeholder="Contoh: Gaji Bulan Ini, Simpanan"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Jumlah (RM)</label>
+                            <Input
+                                type="number"
+                                value={newFund.amount}
+                                onChange={(e) => setNewFund({ ...newFund, amount: e.target.value })}
+                                placeholder="0"
+                                required
+                            />
+                        </div>
+                        <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                            Simpan Dana
+                        </Button>
+                    </form>
+                )}
             </Dialog>
         </div>
     );

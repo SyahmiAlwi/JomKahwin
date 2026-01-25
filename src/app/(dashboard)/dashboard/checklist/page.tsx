@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Check, Plus, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
