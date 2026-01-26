@@ -43,13 +43,13 @@ const config: Config = {
           400: "#FFAFCC", // Uranian Blue (actually pink)
           500: "#FF8FA3", // Baker-Miller Pink
         },
-        gold: {
-          50: "#FFF8E7", // Cosmic Latte
-          100: "#FFF1E6", // Linen
-          200: "#FDE4CF", // Bisque
-          300: "#FAD2E1", // Deep Champagne (Adjusted to match pinkish gold)
-          400: "#E2B065", // Earth Yellow (Soft Gold)
-          500: "#D4A373", // Muted Gold
+        green: {
+          50: "#F9FCF4", // Very pale green
+          100: "#F2F8E7", // Lightest green
+          200: "#E5F1CD", // Pale green
+          300: "#D9EAB3", // Soft green
+          400: "#CEE38E", // Pastel Green (Base)
+          500: "#B4CB77", // Darker Green
         },
         cream: "#FAFAF5",
         charcoal: "#4A4E69",
@@ -65,7 +65,7 @@ const config: Config = {
       },
       backgroundImage: {
         'batik-pattern': "url('/patterns/batik-subtle.png')",
-        'songket-gradient': "linear-gradient(135deg, #E2B065 0%, #D4A373 100%)",
+        'songket-gradient': "linear-gradient(135deg, #CEE38E 0%, #B4CB77 100%)",
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',
