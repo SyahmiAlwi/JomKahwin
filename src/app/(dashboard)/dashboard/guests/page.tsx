@@ -137,7 +137,7 @@ export default function GuestListPage() {
 
     const handleDeleteGroup = (id: string) => {
         if (groups.length <= 1) {
-            toast({ title: "Ralat!", description: "Anda mesti mempunyai sekurang-kurangnya satu kumpulan.", variant: "destructive" });
+            toast({ title: "Ralat!", description: "Anda mesti mempunyai sekurang-kurangnya satu kumpulan.", variant: "error" });
             return;
         }
         setGroups(groups.filter(g => g.id !== id));
