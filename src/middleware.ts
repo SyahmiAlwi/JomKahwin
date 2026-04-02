@@ -33,18 +33,17 @@ export async function middleware(request: NextRequest) {
         }
     );
 
-    // Auth bypass for now
-    // const {
-    //   data: { user },
-    // } = await supabase.auth.getUser();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    // if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
-    //   return NextResponse.redirect(new URL("/login", request.url));
-    // }
+    if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+        return NextResponse.redirect(new URL("/login", request.url));
+    }
 
-    // if (request.nextUrl.pathname.startsWith("/login") && user) {
-    //   return NextResponse.redirect(new URL("/dashboard", request.url));
-    // }
+    if (request.nextUrl.pathname.startsWith("/login") && user) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
 
     return response;
 }
