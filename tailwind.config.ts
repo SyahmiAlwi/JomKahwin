@@ -48,8 +48,12 @@ const config: Config = {
           100: "#F2F8E7", // Lightest green
           200: "#E5F1CD", // Pale green
           300: "#D9EAB3", // Soft green
-          400: "#CEE38E", // Pastel Green (Base)
-          500: "#B4CB77", // Darker Green
+          400: "#D9EAB3", // Soft green (Repeat to ensure softness)
+          500: "#CEE38E", // Pastel Green (The requested soft green)
+          600: "#CEE38E", // Force Soft Green
+          700: "#CEE38E", // Force Soft Green
+          800: "#CEE38E", // Force Soft Green
+          900: "#CEE38E", // Force Soft Green
         },
         cream: "#FAFAF5",
         charcoal: "#4A4E69",

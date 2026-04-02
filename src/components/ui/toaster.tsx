@@ -30,7 +30,7 @@ export function Toaster() {
                         >
                             <Icon className={cn(
                                 "h-5 w-5 shrink-0 mt-0.5",
-                                toast.variant === "success" && "text-green-600",
+                                toast.variant === "success" && "text-foreground",
                                 toast.variant === "error" && "text-red-600",
                                 !toast.variant && "text-primary"
                             )} />
