@@ -25,17 +25,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     const fetchUser = async () => {
         try {
-            console.log("UserProvider: Fetching session...");
             const { data: { session }, error } = await supabase.auth.getSession();
             if (error) {
-                console.error("UserProvider: Error getting session:", error);
                 throw error;
             }
-            console.log("UserProvider: Session retrieved:", session ? "Found" : "Null", session?.user?.id);
             setSession(session);
             setUser(session?.user ?? null);
-        } catch (error) {
-            console.error('Error fetching user:', error);
+        } catch {
+            // silently ignore session fetch errors
         } finally {
             setIsLoading(false);
         }
@@ -61,90 +58,74 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     const uploadPhoto = async (file: File) => {
         if (!user) {
-            console.error("No user found in uploadPhoto");
             return;
         }
-
-        console.log("Starting uploadPhoto for user:", user.id);
-        console.log("File details:", file.name, file.size, file.type);
 
         try {
             setIsLoading(true);
 
             const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
             const filePath = `${fileName}`;
-            console.log("Generated filePath:", filePath);
 
-            // 1. Upload to 'profile-photos' bucket (fallback to 'avatars' if needed)
-            console.log("Attempting upload to 'profile-photos'...");
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            // 1. Upload — try 'profile-photos' first, fall back to 'avatars'
+            // bucketName is set at the point where the upload actually succeeds so that
+            // the public URL below always references the correct bucket.
+            let bucketName = 'profile-photos';
+            const { error: primaryError } = await supabase.storage
                 .from('profile-photos')
                 .upload(filePath, file);
 
-            if (uploadError) {
-                console.warn("Upload to 'profile-photos' failed:", uploadError);
-            } else {
-                console.log("Upload to 'profile-photos' success:", uploadData);
-            }
-
-            // Fallback to 'avatars' if 'profile-photos' doesn't exist
-            if (uploadError && uploadError.message.includes('Bucket not found')) {
-                console.log("Bucket 'profile-photos' not found. Retrying with 'avatars'...");
-                const { error: retryError } = await supabase.storage
+            if (primaryError?.message?.includes('Bucket not found')) {
+                const { error: fallbackError } = await supabase.storage
                     .from('avatars')
                     .upload(filePath, file);
 
-                if (retryError) {
-                    console.error("Fallback upload to 'avatars' failed:", retryError);
-                    throw retryError;
+                if (fallbackError) {
+                    throw fallbackError;
                 }
-                console.log("Fallback upload to 'avatars' success");
-            } else if (uploadError) {
-                throw uploadError;
+                // Record which bucket was actually used before building the public URL
+                bucketName = 'avatars';
+            } else if (primaryError) {
+                throw primaryError;
             }
 
-            // 2. Get Public URL
-            let bucketName = 'profile-photos';
-            if (uploadError && uploadError.message.includes('Bucket not found')) {
-                bucketName = 'avatars';
-            }
-            console.log("Getting Public URL from bucket:", bucketName);
+            // 2. Get Public URL — bucketName is guaranteed to match the bucket used above
 
             const { data: { publicUrl } } = supabase.storage
                 .from(bucketName)
                 .getPublicUrl(filePath);
 
-            console.log("Generated Public URL:", publicUrl);
+            // Temporary debug — remove once broken-image is resolved
+            console.log("[uploadPhoto] bucket:", bucketName, "| filePath:", filePath, "| publicUrl:", publicUrl);
 
             // 3. Update User Metadata
-            console.log("Updating user metadata with avatar_url...");
             const { data: updateData, error: updateError } = await supabase.auth.updateUser({
                 data: { avatar_url: publicUrl }
             });
 
             if (updateError) {
-                console.error("Update user metadata failed:", updateError);
                 throw updateError;
             }
-            console.log("User metadata updated successfully:", updateData);
 
-            // 4. Update local state
-            console.log("Refetching user session...");
-            await fetchUser(); // Refresh user to get new metadata
-            console.log("User session refreshed.");
+            // 4. Update local state — use the user returned by updateUser() directly.
+            // getSession() returns a cached session that won't yet reflect the new
+            // avatar_url, so we must not call fetchUser() here.
+            if (updateData.user) {
+                setUser(updateData.user);
+            }
 
             toast({
                 title: "Foto dikemaskini!",
                 description: "Foto profil anda telah berjaya dimuat naik.",
-                variant: 'default' // Or success if available
+                variant: 'default'
             });
 
-        } catch (error: any) {
-            console.error('Error uploading photo:', error);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Sila cuba lagi nanti.";
             toast({
                 title: "Gagal memuat naik",
-                description: error.message || "Sila cuba lagi nanti.",
+                description: message,
                 variant: "error"
             });
         } finally {
