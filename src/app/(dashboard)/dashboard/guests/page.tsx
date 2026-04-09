@@ -32,6 +32,10 @@ import {
   useUpdateGroup,
   useMoveGuests,
 } from "@/lib/supabase/queries/guests";
+import { useWedding } from "@/components/providers/wedding-provider";
+import { useUser } from "@/components/providers/user-provider";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -97,6 +101,8 @@ function getGroupIcon(name: string): LucideIcon {
 // ── Component ─────────────────────────────────────────────────
 
 export default function GuestListPage() {
+  const { weddingId, isLoading: weddingLoading } = useWedding();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = useState("");
 
   // groups: start from defaults; updated when DB guests load
@@ -187,9 +193,10 @@ export default function GuestListPage() {
     e.preventDefault();
     const selectedGroup =
       groups.find((g) => g.id === (newGuest.group || groups[0]?.id)) ?? groups[0];
+    const guestName = newGuest.name || "Tetamu";
     try {
       await addGuestMutation.mutateAsync({
-        name: newGuest.name || "Tetamu",
+        name: guestName,
         relation: newGuest.relation || "-",
         phone: newGuest.phone || "",
         group_name: selectedGroup?.id ?? "Lain-lain",
@@ -199,8 +206,13 @@ export default function GuestListPage() {
       toast({ title: "Berjaya!", description: "Tetamu baru ditambah.", variant: "success" });
       setNewGuest({ name: "", relation: "", phone: "", pax: 1, group: "" });
       setIsAddGuestOpen(false);
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah tetamu", entityType: "guest", entityName: guestName });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
@@ -220,20 +232,31 @@ export default function GuestListPage() {
         rsvp_status: editingGuest.rsvp,
       });
       toast({ title: "Dikemaskini!", description: "Maklumat tetamu telah dikemaskini.", variant: "success" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Kemaskini tetamu", entityType: "guest", entityName: editingGuest.name });
+      }
       setEditingGuest(null);
       setIsEditGuestOpen(false);
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
   const handleDeleteGuest = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    const guestToDelete = guests.find(g => g.id === id);
     try {
       await deleteGuestMutation.mutateAsync(id);
       toast({ title: "Dihapus!", description: "Tetamu telah dipadam.", variant: "default" });
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Padam tetamu", entityType: "guest", entityName: guestToDelete?.name });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
@@ -280,8 +303,9 @@ export default function GuestListPage() {
           )
         );
         toast({ title: "Disimpan!", description: "Kumpulan dikemaskini.", variant: "success" });
-      } catch (err: any) {
-        toast({ title: "Ralat!", description: err.message, variant: "error" });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Ralat";
+        toast({ title: "Ralat!", description: msg, variant: "error" });
       }
     } else {
       // New group — stored locally until first guest is added to it
@@ -317,12 +341,21 @@ export default function GuestListPage() {
       });
       setLocalGroups((prev) => prev.filter((g) => g.id !== id));
       toast({ title: "Dihapus!", description: "Kumpulan dipadam.", variant: "default" });
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
   // ── Render ───────────────────────────────────────────────────
+
+  if (weddingLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">

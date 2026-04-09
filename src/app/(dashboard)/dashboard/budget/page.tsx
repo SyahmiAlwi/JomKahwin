@@ -23,10 +23,16 @@ import {
   useAddExpenseCategory,
   useAddFund,
 } from "@/lib/supabase/queries/budget";
+import { useWedding } from "@/components/providers/wedding-provider";
+import { useUser } from "@/components/providers/user-provider";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
 type DialogMode = "expense" | "fund";
 
 export default function BudgetPage() {
+  const { weddingId, isLoading: weddingLoading } = useWedding();
+  const { user } = useUser();
   const { data: categories = [] } = useBudgetCategories();
   const { data: expenses = [] } = useBudgetExpenses();
   const { data: funds = [] } = useBudgetFunds();
@@ -81,7 +87,7 @@ export default function BudgetPage() {
 
   const handleAddExpense = async () => {
     try {
-      await addExpenseMutation.mutateAsync({
+      const cat = await addExpenseMutation.mutateAsync({
         name: newExpense.category,
         amount: parseInt(newExpense.amount) || 0,
         total: parseInt(newExpense.total) || 0,
@@ -89,8 +95,13 @@ export default function BudgetPage() {
       toast({ title: "Berjaya!", description: "Perbelanjaan baru ditambah.", variant: "success" });
       setNewExpense({ category: "", amount: "", total: "" });
       setIsDialogOpen(false);
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah kategori bajet", entityType: "budget", entityName: cat.name });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
@@ -101,12 +112,25 @@ export default function BudgetPage() {
         amount: parseInt(newFund.amount) || 0,
       });
       toast({ title: "Berjaya!", description: "Dana baru ditambah.", variant: "success" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah dana tabung", entityType: "budget", entityName: newFund.source });
+      }
       setNewFund({ source: "", amount: "" });
       setIsDialogOpen(false);
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
+
+  if (weddingLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Search, Phone, DollarSign, CheckCircle2, Clock, Star, Trash2, Edit3, Store, TrendingUp, Wallet } from "lucide-react";
+import { useWedding } from "@/components/providers/wedding-provider";
 
 type Category = "Katering" | "Fotografi" | "Videografi" | "Dekorasi" | "Busana" | "Pelamin" | "Hiburan" | "Lain-lain";
 type Status = "Booked" | "Contacted" | "Shortlisted";
@@ -64,6 +65,7 @@ const INITIAL_VENDORS: Vendor[] = [
 const EMPTY_FORM = { name: "", category: "Katering" as Category, phone: "", estimatedPrice: "", depositPaid: "", status: "Shortlisted" as Status, notes: "" };
 
 export default function SuppliersPage() {
+    const { isLoading: weddingLoading } = useWedding();
     const [vendors, setVendors] = useState<Vendor[]>(INITIAL_VENDORS);
     const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState<Category | "Semua">("Semua");
@@ -121,6 +123,14 @@ export default function SuppliersPage() {
         setVendors(vendors.filter(v => v.id !== id));
         toast({ title: "Dipadam", description: "Pembekal telah dibuang.", variant: "success" });
     };
+
+    if (weddingLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 pb-24">

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, Calendar, CheckSquare, Wallet, Store, Users, User } from "lucide-react";
+import { X, Home, Calendar, CheckSquare, Wallet, Store, Users, User, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileSidebarProps {
@@ -61,6 +61,7 @@ export function MobileSidebar({
         { icon: Wallet, label: "Bajet", href: "/dashboard/budget" },
         { icon: Store, label: "Vendor", href: "/dashboard/suppliers" },
         { icon: Users, label: "Senarai Tetamu", href: "/dashboard/guests" },
+        { icon: Activity, label: "Aktiviti", href: "/dashboard/activity" },
         { icon: User, label: "Tetapan", href: "/dashboard/settings" },
     ];
 

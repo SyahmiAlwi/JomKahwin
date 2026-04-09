@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useWedding } from "@/components/providers/wedding-provider";
 
 export type DbGuest = {
   id: string;
   user_id: string;
+  wedding_id: string | null;
   event_id: string | null;
   name: string;
   relation: string | null;
@@ -18,13 +20,16 @@ export type DbGuest = {
 // ── Queries ──────────────────────────────────────────────────
 
 export function useGuests() {
+  const { weddingId } = useWedding();
   return useQuery({
-    queryKey: ["guests"],
+    queryKey: ["guests", weddingId],
+    enabled: !!weddingId,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("guests")
         .select("*")
+        .eq("wedding_id", weddingId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as DbGuest[];
@@ -36,6 +41,7 @@ export function useGuests() {
 
 export function useAddGuest() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async (guest: {
       name: string;
@@ -45,6 +51,7 @@ export function useAddGuest() {
       group_color: string;
       pax: number;
     }) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
       const supabase = createClient();
       const {
         data: { user },
@@ -53,20 +60,21 @@ export function useAddGuest() {
 
       const { data, error } = await supabase
         .from("guests")
-        .insert({ ...guest, user_id: user.id, rsvp_status: "pending" })
+        .insert({ ...guest, user_id: user.id, wedding_id: weddingId, rsvp_status: "pending" })
         .select()
         .single();
       if (error) throw error;
       return data as DbGuest;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guests", weddingId] });
     },
   });
 }
 
 export function useUpdateGuest() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async (updates: {
       id: string;
@@ -90,13 +98,14 @@ export function useUpdateGuest() {
       return data as DbGuest;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guests", weddingId] });
     },
   });
 }
 
 export function useDeleteGuest() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient();
@@ -104,7 +113,7 @@ export function useDeleteGuest() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guests", weddingId] });
     },
   });
 }
@@ -112,6 +121,7 @@ export function useDeleteGuest() {
 /** Bulk-rename / recolor a group across all guests that belong to it. */
 export function useUpdateGroup() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async ({
       oldName,
@@ -126,11 +136,12 @@ export function useUpdateGroup() {
       const { error } = await supabase
         .from("guests")
         .update({ group_name: newName, group_color: newColor })
-        .eq("group_name", oldName);
+        .eq("group_name", oldName)
+        .eq("wedding_id", weddingId!);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guests", weddingId] });
     },
   });
 }
@@ -138,6 +149,7 @@ export function useUpdateGroup() {
 /** Move all guests in one group to a different group (used when deleting a group). */
 export function useMoveGuests() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async ({
       fromGroup,
@@ -152,11 +164,12 @@ export function useMoveGuests() {
       const { error } = await supabase
         .from("guests")
         .update({ group_name: toGroup, group_color: toColor })
-        .eq("group_name", fromGroup);
+        .eq("group_name", fromGroup)
+        .eq("wedding_id", weddingId!);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guests", weddingId] });
     },
   });
 }

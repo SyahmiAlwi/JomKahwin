@@ -1,298 +1,416 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Calendar, Edit3, Heart, Clock, Sparkles } from "lucide-react";
+import {
+  Calendar, Plus, Trash2, Edit3, Heart, CalendarDays, Clock,
+} from "lucide-react";
+import {
+  useEvents,
+  useAddEvent,
+  useUpdateEvent,
+  useDeleteEvent,
+  calcDaysLeft,
+  formatDateMY,
+  type DbEvent,
+} from "@/lib/supabase/queries/events";
+import { useWedding } from "@/components/providers/wedding-provider";
+import { useUser } from "@/components/providers/user-provider";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
-interface TimeLeft {
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-}
+const EVENT_TYPES = ["Nikah", "Tunang", "Resepsi"] as const;
 
-function calculateTimeLeft(targetDate: Date): TimeLeft {
-    const diff = targetDate.getTime() - Date.now();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    return {
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / (1000 * 60)) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-    };
-}
+type EventForm = { name: string; date: string; type: string };
+const EMPTY_FORM: EventForm = { name: "", date: "", type: EVENT_TYPES[0] };
 
-function FlipUnit({ value, label }: { value: number; label: string }) {
-    const prev = useRef(value);
-    const changed = prev.current !== value;
-    useEffect(() => { prev.current = value; }, [value]);
+// ── Status chip helper ────────────────────────────────────────
 
-    const display = String(value).padStart(2, "0");
-
+function DaysChip({ days }: { days: number }) {
+  if (days < 0) {
     return (
-        <div className="flex flex-col items-center gap-2">
-            <div className="relative w-20 h-20 md:w-28 md:h-28">
-                <div className="w-full h-full rounded-2xl bg-white/80 backdrop-blur-sm border border-white shadow-lg shadow-primary/10 flex items-center justify-center overflow-hidden">
-                    <AnimatePresence mode="popLayout">
-                        <motion.span
-                            key={value}
-                            initial={changed ? { y: -40, opacity: 0 } : false}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 40, opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            className="text-3xl md:text-5xl font-bold text-foreground font-heading tabular-nums"
-                        >
-                            {display}
-                        </motion.span>
-                    </AnimatePresence>
-                </div>
-                {/* Shine effect */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
-            </div>
-            <span className="text-xs md:text-sm font-medium text-foreground/70 uppercase tracking-widest">{label}</span>
-        </div>
+      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+        Sudah berlalu
+      </span>
     );
+  }
+  if (days === 0) {
+    return (
+      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold animate-pulse">
+        Hari Ini! 🎉
+      </span>
+    );
+  }
+  const color =
+    days <= 30
+      ? "bg-rose-50 text-rose-600"
+      : days <= 90
+      ? "bg-amber-50 text-amber-700"
+      : "bg-green-50 text-green-700";
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>
+      {days} hari lagi
+    </span>
+  );
 }
 
-export default function CountdownPage() {
-    const [targetDate, setTargetDate] = useState<Date | null>(null);
-    const [eventName, setEventName] = useState("Majlis Perkahwinan");
-    const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [formDate, setFormDate] = useState("");
-    const [formName, setFormName] = useState("");
-    const [isPast, setIsPast] = useState(false);
-    const { toast } = useToast();
+// ── Page ──────────────────────────────────────────────────────
 
-    // Load from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem("jk_wedding_date");
-        const savedName = localStorage.getItem("jk_wedding_name");
-        if (saved) {
-            setTargetDate(new Date(saved));
-            setFormDate(new Date(saved).toISOString().split("T")[0]);
+export default function MajlisPage() {
+  const { toast } = useToast();
+  const { weddingId, isLoading: weddingLoading } = useWedding();
+  const { user } = useUser();
+  const { data: events = [], isLoading } = useEvents();
+  const addEvent = useAddEvent();
+  const updateEvent = useUpdateEvent();
+  const deleteEvent = useDeleteEvent();
+
+  // Dialog state — null = closed, "add" = add mode, DbEvent = edit mode
+  const [dialog, setDialog] = useState<null | "add" | DbEvent>(null);
+  const [form, setForm] = useState<EventForm>(EMPTY_FORM);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const openAdd = () => {
+    setForm(EMPTY_FORM);
+    setDialog("add");
+  };
+
+  const openEdit = (event: DbEvent) => {
+    setForm({ name: event.name, date: event.date ?? "", type: event.type ?? EVENT_TYPES[0] });
+    setDialog(event);
+  };
+
+  const closeDialog = () => {
+    setDialog(null);
+    setForm(EMPTY_FORM);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.date) {
+      toast({ title: "Sila isi nama dan tarikh majlis.", variant: "error" });
+      return;
+    }
+    try {
+      if (dialog === "add") {
+        const newEv = await addEvent.mutateAsync({ name: form.name.trim(), date: form.date, type: form.type });
+        toast({ title: "Majlis berjaya ditambah!", variant: "success" });
+        if (weddingId && user) {
+          const supabase = createClient();
+          await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah majlis", entityType: "event", entityName: newEv.name });
         }
-        if (savedName) {
-            setEventName(savedName);
-            setFormName(savedName);
+      } else if (dialog && typeof dialog === "object") {
+        await updateEvent.mutateAsync({ id: dialog.id, name: form.name.trim(), date: form.date, type: form.type });
+        toast({ title: "Majlis berjaya dikemaskini!", variant: "success" });
+        if (weddingId && user) {
+          const supabase = createClient();
+          await logActivity({ supabase, weddingId, userId: user.id, action: "Kemaskini majlis", entityType: "event", entityName: form.name.trim() });
         }
-    }, []);
+      }
+      closeDialog();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
+      toast({ title: "Ralat", description: msg, variant: "error" });
+    }
+  };
 
-    // Tick every second
-    useEffect(() => {
-        if (!targetDate) return;
-        const tick = () => {
-            const tl = calculateTimeLeft(targetDate);
-            setTimeLeft(tl);
-            setIsPast(targetDate.getTime() <= Date.now());
-        };
-        tick();
-        const id = setInterval(tick, 1000);
-        return () => clearInterval(id);
-    }, [targetDate]);
+  const handleDelete = async (id: string) => {
+    const eventToDelete = events.find(e => e.id === id);
+    try {
+      await deleteEvent.mutateAsync(id);
+      toast({ title: "Majlis dipadam.", variant: "default" });
+      setDeleteConfirm(null);
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Padam majlis", entityType: "event", entityName: eventToDelete?.name });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
+      toast({ title: "Ralat", description: msg, variant: "error" });
+    }
+  };
 
-    const handleSave = () => {
-        if (!formDate) return;
-        const d = new Date(formDate + "T00:00:00");
-        setTargetDate(d);
-        setEventName(formName || "Majlis Perkahwinan");
-        localStorage.setItem("jk_wedding_date", d.toISOString());
-        localStorage.setItem("jk_wedding_name", formName || "Majlis Perkahwinan");
-        setIsDialogOpen(false);
-        toast({ title: "Berjaya!", description: "Tarikh perkahwinan disimpan.", variant: "success" });
-    };
+  const isMutating = addEvent.isPending || updateEvent.isPending;
+  const isEditMode = dialog !== null && dialog !== "add";
+  const dialogTitle = isEditMode ? "Kemaskini Majlis" : "Tambah Majlis Baru";
 
-    const openDialog = () => {
-        setFormName(eventName);
-        setIsDialogOpen(true);
-    };
+  // Nearest upcoming event for summary card
+  const upcomingEvents = events
+    .filter((e) => e.date && calcDaysLeft(e.date) >= 0)
+    .sort((a, b) => calcDaysLeft(a.date!) - calcDaysLeft(b.date!));
+  const nextEvent = upcomingEvents[0] ?? null;
 
-    const formattedDate = targetDate
-        ? targetDate.toLocaleDateString("ms-MY", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
-        : null;
-
-    const totalDaysFromNow = targetDate
-        ? Math.max(0, Math.floor((targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-        : 0;
-
+  if (weddingLoading) {
     return (
-        <div className="space-y-8 pb-24">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-heading font-bold text-foreground">Kiraan Detik</h1>
-                    <p className="text-muted-foreground">Hitung mundur menuju hari bahagia anda.</p>
-                </div>
-                <Button onClick={openDialog} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 w-fit">
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    {targetDate ? "Tukar Tarikh" : "Tetapkan Tarikh"}
-                </Button>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 pb-24">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-heading font-bold text-foreground">Urus Majlis</h1>
+          <p className="text-muted-foreground">Tambah dan urus semua majlis perkahwinan anda.</p>
+        </div>
+        <Button
+          onClick={openAdd}
+          className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 rounded-full px-6 w-fit"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Tambah Majlis
+        </Button>
+      </div>
+
+      {/* Summary gradient card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card
+          variant="gradient"
+          className="p-8 text-white relative overflow-hidden border-none shadow-xl"
+        >
+          <Heart className="absolute right-6 top-6 h-28 w-28 text-white/10" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-white/70 text-sm font-medium uppercase tracking-widest mb-1">
+                Majlis Anda
+              </p>
+              <h2 className="text-5xl font-bold tracking-tight font-heading">
+                {events.length}
+                <span className="text-xl opacity-60 font-normal ml-2">
+                  {events.length === 1 ? "majlis" : "majlis"}
+                </span>
+              </h2>
             </div>
-
-            {targetDate ? (
-                <>
-                    {/* Hero Countdown Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <Card variant="gradient" className="p-8 md:p-12 relative overflow-hidden border-none shadow-2xl shadow-primary/20 text-center">
-                            {/* Background decoration */}
-                            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                <Heart className="absolute top-4 right-6 h-32 w-32 text-white/10 rotate-12" />
-                                <Sparkles className="absolute bottom-4 left-6 h-20 w-20 text-white/10 -rotate-12" />
-                            </div>
-
-                            <div className="relative z-10 space-y-6">
-                                {isPast ? (
-                                    <div className="space-y-3">
-                                        <motion.div
-                                            animate={{ scale: [1, 1.05, 1] }}
-                                            transition={{ repeat: Infinity, duration: 2 }}
-                                        >
-                                            <Heart className="h-16 w-16 text-white mx-auto fill-white" />
-                                        </motion.div>
-                                        <h2 className="text-4xl font-heading font-bold text-white">Tahniah!</h2>
-                                        <p className="text-white/90 text-lg">Hari istimewa anda telah tiba. Semoga berbahagia!</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div>
-                                            <p className="text-white/80 text-sm uppercase tracking-widest font-medium mb-1">Menuju ke</p>
-                                            <h2 className="text-2xl md:text-3xl font-heading font-bold text-white">{eventName}</h2>
-                                            {formattedDate && (
-                                                <p className="text-white/70 mt-1 text-sm">{formattedDate}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Countdown Units */}
-                                        <div className="flex items-end justify-center gap-3 md:gap-6 flex-wrap">
-                                            <FlipUnit value={timeLeft.days} label="Hari" />
-                                            <span className="text-4xl font-bold text-white/60 pb-8">:</span>
-                                            <FlipUnit value={timeLeft.hours} label="Jam" />
-                                            <span className="text-4xl font-bold text-white/60 pb-8">:</span>
-                                            <FlipUnit value={timeLeft.minutes} label="Minit" />
-                                            <span className="text-4xl font-bold text-white/60 pb-8">:</span>
-                                            <FlipUnit value={timeLeft.seconds} label="Saat" />
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </Card>
-                    </motion.div>
-
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {[
-                            { label: "Jumlah Hari Lagi", value: totalDaysFromNow.toString(), icon: Calendar, color: "text-pink-500 bg-pink-50" },
-                            { label: "Minggu Lagi", value: Math.floor(totalDaysFromNow / 7).toString(), icon: Clock, color: "text-purple-500 bg-purple-50" },
-                            { label: "Bulan Lagi", value: Math.floor(totalDaysFromNow / 30).toString(), icon: Heart, color: "text-rose-500 bg-rose-50" },
-                        ].map((stat, i) => (
-                            <motion.div
-                                key={stat.label}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 + i * 0.1 }}
-                            >
-                                <Card className="p-5 text-center border-border/50">
-                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center mx-auto mb-3 ${stat.color}`}>
-                                        <stat.icon className="h-5 w-5" />
-                                    </div>
-                                    <p className="text-2xl font-bold font-heading text-foreground">{stat.value}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    {/* Event info card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                    >
-                        <Card className="p-6 border-border/50">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                                    <Heart className="h-6 w-6 text-primary fill-primary/30" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-foreground text-lg">{eventName}</h3>
-                                    <p className="text-muted-foreground text-sm flex items-center gap-1.5">
-                                        <Calendar className="h-3.5 w-3.5" />
-                                        {formattedDate}
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={openDialog}
-                                    className="ml-auto border-border/50 hover:bg-primary/5 hover:border-primary/30"
-                                >
-                                    <Edit3 className="h-3.5 w-3.5 mr-1.5" />
-                                    Edit
-                                </Button>
-                            </div>
-                        </Card>
-                    </motion.div>
-                </>
-            ) : (
-                /* Empty state */
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <Card className="p-12 text-center border-border/50 space-y-6">
-                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                            <Heart className="h-10 w-10 text-primary fill-primary/30" />
-                        </div>
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-heading font-bold text-foreground">Tetapkan Tarikh Perkahwinan</h3>
-                            <p className="text-muted-foreground max-w-sm mx-auto">
-                                Masukkan tarikh majlis anda untuk mula mengira detik menuju hari bahagia!
-                            </p>
-                        </div>
-                        <Button onClick={openDialog} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Tetapkan Tarikh
-                        </Button>
-                    </Card>
-                </motion.div>
+            {nextEvent && (
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Majlis Terdekat</p>
+                <p className="font-heading font-bold text-white text-lg leading-tight">{nextEvent.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CalendarDays className="h-3.5 w-3.5 text-white/60" />
+                  <p className="text-white/80 text-sm">{formatDateMY(nextEvent.date!)}</p>
+                  <span className="text-white/40">·</span>
+                  <Clock className="h-3.5 w-3.5 text-white/60" />
+                  <p className="text-white/80 text-sm font-semibold">
+                    {calcDaysLeft(nextEvent.date!)} hari lagi
+                  </p>
+                </div>
+              </div>
             )}
+          </div>
+        </Card>
+      </motion.div>
 
-            {/* Dialog */}
-            <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} title="Tetapkan Tarikh Majlis">
-                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
-                    <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Nama Majlis</label>
-                        <Input
-                            value={formName}
-                            onChange={(e) => setFormName(e.target.value)}
-                            placeholder="Contoh: Majlis Perkahwinan Syahmi & Aina"
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Tarikh Majlis</label>
-                        <Input
-                            type="date"
-                            value={formDate}
-                            onChange={(e) => setFormDate(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                        <Heart className="h-4 w-4 mr-2" />
-                        Simpan Tarikh
-                    </Button>
-                </form>
-            </Dialog>
+      {/* Events list */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 rounded-2xl bg-muted/50 animate-pulse" />
+          ))}
         </div>
-    );
+      ) : events.length === 0 ? (
+        /* Empty state */
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="p-14 text-center border-dashed border-2 border-border space-y-5">
+            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Heart className="h-10 w-10 text-primary fill-primary/30" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-heading font-bold text-foreground">
+                Tiada Majlis Lagi
+              </h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                Tambah majlis pertama anda — nikah, tunang, atau resepsi — dan mula merancang!
+              </p>
+            </div>
+            <Button
+              onClick={openAdd}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Majlis Pertama
+            </Button>
+          </Card>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          <AnimatePresence>
+            {events.map((event, index) => {
+              const days = event.date ? calcDaysLeft(event.date) : null;
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ delay: index * 0.06 }}
+                >
+                  <Card className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-lg transition-all border-border/40 group bg-white/80">
+                    {/* Icon */}
+                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Heart className="h-6 w-6 text-primary fill-primary/30" />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-heading font-bold text-foreground text-lg truncate">
+                          {event.name}
+                        </h3>
+                        {event.type && (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
+                            {event.type}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        {event.date ? (
+                          <>
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {formatDateMY(event.date)}
+                            </span>
+                            {days !== null && <DaysChip days={days} />}
+                          </>
+                        ) : (
+                          <span className="italic">Tarikh belum ditetapkan</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(event)}
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteConfirm(event.id)}
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* ── Add / Edit Dialog ─────────────────────────────────── */}
+      <Dialog
+        isOpen={dialog !== null}
+        onClose={closeDialog}
+        title={dialogTitle}
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="majlis-name">Nama Majlis</Label>
+            <Input
+              id="majlis-name"
+              placeholder="cth. Majlis Nikah"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="majlis-date">Tarikh</Label>
+            <Input
+              id="majlis-date"
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Jenis Majlis</Label>
+            <div className="flex gap-2">
+              {EVENT_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setForm({ ...form, type })}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                    form.type === type
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-background text-foreground border-input hover:border-primary/40"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={isMutating}
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isMutating ? "Menyimpan…" : isEditMode ? "Simpan Perubahan" : "Tambah Majlis"}
+            </Button>
+            <Button onClick={closeDialog} variant="outline" className="flex-1">
+              Batal
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* ── Delete confirmation dialog ────────────────────────── */}
+      <Dialog
+        isOpen={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title="Padam Majlis?"
+      >
+        <div className="space-y-4">
+          <p className="text-muted-foreground text-sm">
+            Majlis ini akan dipadam secara kekal. Tindakan ini tidak boleh dibatalkan.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              disabled={deleteEvent.isPending}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white border-0"
+            >
+              {deleteEvent.isPending ? "Memadam…" : "Ya, Padam"}
+            </Button>
+            <Button
+              onClick={() => setDeleteConfirm(null)}
+              variant="outline"
+              className="flex-1"
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </div>
+  );
 }

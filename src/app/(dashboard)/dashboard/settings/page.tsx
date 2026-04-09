@@ -14,9 +14,10 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Bell, Lock, Globe, LogOut, ChevronRight, Moon } from "lucide-react";
+import { User, Bell, Lock, Globe, LogOut, ChevronRight, Moon, Copy, Check, RefreshCw, UserPlus, Users2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/components/providers/user-provider";
+import { useWedding } from "@/components/providers/wedding-provider";
 import { createClient } from "@/lib/supabase/client";
 
 const LANGUAGES = [
@@ -31,6 +32,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { user } = useUser();
+    const { weddingId, inviteCode, members, isLoading: weddingLoading, refreshWedding } = useWedding();
     const supabase = createClient();
 
     // ── Local prefs (hydrated from localStorage) ─────────────
@@ -85,6 +87,56 @@ export default function SettingsPage() {
             toast({ title: "Gagal mengemaskini profil", description: msg, variant: "error" });
         } finally {
             setEditLoading(false);
+        }
+    };
+
+    // ── Collaboration ─────────────────────────────────────────
+    const [copied, setCopied] = useState(false);
+    const [joinCode, setJoinCode] = useState("");
+    const [joining, setJoining] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
+
+    const handleCopyCode = async () => {
+        if (!inviteCode) return;
+        try {
+            await navigator.clipboard.writeText(inviteCode);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            toast({ title: "Kod disalin!", variant: "default" });
+        } catch {
+            toast({ title: "Gagal menyalin kod.", variant: "error" });
+        }
+    };
+
+    const handleJoinWedding = async () => {
+        if (!joinCode.trim()) return;
+        setJoining(true);
+        try {
+            const { error } = await supabase.rpc("join_wedding_by_code", { code: joinCode.trim() });
+            if (error) throw error;
+            toast({ title: "Berjaya menyertai!", description: "Anda kini berkongsi perkahwinan.", variant: "default" });
+            setJoinCode("");
+            await refreshWedding();
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Kod tidak sah atau anda sudah menjadi ahli.";
+            toast({ title: "Gagal menyertai", description: msg, variant: "error" });
+        } finally {
+            setJoining(false);
+        }
+    };
+
+    const handleRegenerateCode = async () => {
+        setRegenerating(true);
+        try {
+            const { error } = await supabase.rpc("regenerate_invite_code");
+            if (error) throw error;
+            await refreshWedding();
+            toast({ title: "Kod baru dijana!", variant: "default" });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
+            toast({ title: "Gagal jana kod", description: msg, variant: "error" });
+        } finally {
+            setRegenerating(false);
         }
     };
 
@@ -238,6 +290,118 @@ export default function SettingsPage() {
                             </div>
                             <Switch disabled />
                         </div>
+                    </Card>
+                </div>
+
+                {/* Collaboration Section */}
+                <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Pasangan & Kerjasama</h4>
+                    <Card className="p-6 border-border/50 space-y-5">
+                        {weddingLoading ? (
+                            <div className="flex items-center justify-center py-6">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                            </div>
+                        ) : (
+                            <>
+                                {/* Invite code display */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <Users2 className="h-4 w-4 text-primary" />
+                                        <Label className="text-sm font-semibold">Kod Jemputan</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between">
+                                            <span className="font-mono text-2xl font-bold tracking-widest text-primary">
+                                                {inviteCode ?? "------"}
+                                            </span>
+                                            <div className="flex gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={handleCopyCode}
+                                                    disabled={!inviteCode}
+                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                    title="Salin kod"
+                                                >
+                                                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={handleRegenerateCode}
+                                                    disabled={regenerating}
+                                                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                    title="Jana kod baru"
+                                                >
+                                                    <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {members.length <= 1 && (
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                            <span>💡</span>
+                                            Kongsi kod ini dengan pasangan anda supaya mereka boleh menyertai perancangan.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Members list */}
+                                {members.length > 0 && (
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold">Ahli ({members.length})</Label>
+                                        <div className="space-y-2">
+                                            {members.map((member) => {
+                                                const name = member.full_name ?? member.user_id.slice(0, 8);
+                                                const initial = name.charAt(0).toUpperCase();
+                                                const isMe = member.user_id === user?.id;
+                                                const joinedDate = new Date(member.joined_at).toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" });
+                                                return (
+                                                    <div key={member.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                                                        <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
+                                                            {member.avatar_url ? (
+                                                                <img src={member.avatar_url} alt={name} className="w-full h-full object-cover" />
+                                                            ) : initial}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-foreground text-sm truncate">
+                                                                {name}{isMe && <span className="text-xs text-primary ml-1.5 font-normal">(Anda)</span>}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">Sertai: {joinedDate}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Join with code */}
+                                <div className="space-y-2 pt-2 border-t border-border/50">
+                                    <div className="flex items-center gap-2">
+                                        <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                        <Label className="text-sm font-semibold">Sertai Perkahwinan Lain</Label>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Masukkan kod jemputan..."
+                                            value={joinCode}
+                                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                                            onKeyDown={(e) => e.key === "Enter" && handleJoinWedding()}
+                                            maxLength={8}
+                                            className="font-mono uppercase tracking-widest"
+                                        />
+                                        <Button
+                                            onClick={handleJoinWedding}
+                                            disabled={joining || !joinCode.trim()}
+                                            className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+                                        >
+                                            {joining ? "Menyertai…" : "Sertai"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </Card>
                 </div>
 

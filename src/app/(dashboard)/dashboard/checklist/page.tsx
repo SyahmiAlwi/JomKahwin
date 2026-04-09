@@ -15,6 +15,10 @@ import {
   useToggleChecklistTask,
   useDeleteChecklistTask,
 } from "@/lib/supabase/queries/checklist";
+import { useWedding } from "@/components/providers/wedding-provider";
+import { useUser } from "@/components/providers/user-provider";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
 const PHASES = [
   { id: "phase-1", title: "6 Bulan Sebelum" },
@@ -23,6 +27,8 @@ const PHASES = [
 ];
 
 export default function ChecklistPage() {
+  const { weddingId, isLoading: weddingLoading } = useWedding();
+  const { user } = useUser();
   const { data: tasks = [] } = useChecklistTasks();
   const addTaskMutation = useAddChecklistTask();
   const toggleMutation = useToggleChecklistTask();
@@ -44,34 +50,63 @@ export default function ChecklistPage() {
   );
 
   const handleToggleTask = async (taskId: string, currentCompleted: boolean) => {
+    const task = tasks.find(t => t.id === taskId);
     try {
       await toggleMutation.mutateAsync({ id: taskId, completed: !currentCompleted });
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user && task) {
+        const supabase = createClient();
+        await logActivity({
+          supabase, weddingId, userId: user.id,
+          action: !currentCompleted ? "Selesaikan tugasan" : "Batal selesai tugasan",
+          entityType: "checklist", entityName: task.title,
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
   const handleDeleteTask = async (e: React.MouseEvent, taskId: string) => {
     e.stopPropagation();
+    const task = tasks.find(t => t.id === taskId);
     try {
       await deleteMutation.mutateAsync(taskId);
       toast({ title: "Dihapus!", description: "Tugasan telah dipadam.", variant: "default" });
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Padam tugasan", entityType: "checklist", entityName: task?.title });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addTaskMutation.mutateAsync({ title: newTask.title, phase: newTask.phase });
+      const added = await addTaskMutation.mutateAsync({ title: newTask.title, phase: newTask.phase });
       toast({ title: "Berjaya!", description: "Tugasan baru ditambah.", variant: "success" });
       setNewTask({ title: "", phase: "phase-1" });
       setIsDialogOpen(false);
-    } catch (err: any) {
-      toast({ title: "Ralat!", description: err.message, variant: "error" });
+      if (weddingId && user) {
+        const supabase = createClient();
+        await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah tugasan", entityType: "checklist", entityName: added.title });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ralat";
+      toast({ title: "Ralat!", description: msg, variant: "error" });
     }
   };
+
+  if (weddingLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">

@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useWedding } from "@/components/providers/wedding-provider";
 
 export type BudgetCategory = {
   id: string;
   user_id: string;
+  wedding_id: string | null;
   event_id: string | null;
   name: string;
   color: string;
@@ -14,6 +16,7 @@ export type BudgetCategory = {
 export type BudgetExpense = {
   id: string;
   user_id: string;
+  wedding_id: string | null;
   category_id: string;
   description: string | null;
   amount: number;
@@ -24,6 +27,7 @@ export type BudgetExpense = {
 export type BudgetFund = {
   id: string;
   user_id: string;
+  wedding_id: string | null;
   event_id: string | null;
   description: string;
   amount: number;
@@ -34,13 +38,16 @@ export type BudgetFund = {
 // ── Queries ──────────────────────────────────────────────────
 
 export function useBudgetCategories() {
+  const { weddingId } = useWedding();
   return useQuery({
-    queryKey: ["budget_categories"],
+    queryKey: ["budget_categories", weddingId],
+    enabled: !!weddingId,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("budget_categories")
         .select("*")
+        .eq("wedding_id", weddingId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as BudgetCategory[];
@@ -49,13 +56,16 @@ export function useBudgetCategories() {
 }
 
 export function useBudgetExpenses() {
+  const { weddingId } = useWedding();
   return useQuery({
-    queryKey: ["budget_expenses"],
+    queryKey: ["budget_expenses", weddingId],
+    enabled: !!weddingId,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("budget_expenses")
         .select("*")
+        .eq("wedding_id", weddingId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as BudgetExpense[];
@@ -64,13 +74,16 @@ export function useBudgetExpenses() {
 }
 
 export function useBudgetFunds() {
+  const { weddingId } = useWedding();
   return useQuery({
-    queryKey: ["budget_funds"],
+    queryKey: ["budget_funds", weddingId],
+    enabled: !!weddingId,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("budget_funds")
         .select("*")
+        .eq("wedding_id", weddingId!)
         .order("date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as BudgetFund[];
@@ -82,6 +95,7 @@ export function useBudgetFunds() {
 
 export function useAddExpenseCategory() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async ({
       name,
@@ -92,17 +106,18 @@ export function useAddExpenseCategory() {
       amount: number;
       total: number;
     }) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create the category record
       const { data: cat, error: catErr } = await supabase
         .from("budget_categories")
         .insert({
           user_id: user.id,
+          wedding_id: weddingId,
           name,
           color: "text-blue-500 bg-blue-100",
           allocated: total,
@@ -111,9 +126,9 @@ export function useAddExpenseCategory() {
         .single();
       if (catErr) throw catErr;
 
-      // Create the initial expense entry for this category
       const { error: expErr } = await supabase.from("budget_expenses").insert({
         user_id: user.id,
+        wedding_id: weddingId,
         category_id: cat.id,
         description: name,
         amount,
@@ -124,14 +139,15 @@ export function useAddExpenseCategory() {
       return cat as BudgetCategory;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budget_categories"] });
-      queryClient.invalidateQueries({ queryKey: ["budget_expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_categories", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_expenses", weddingId] });
     },
   });
 }
 
 export function useAddFund() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async ({
       source,
@@ -140,6 +156,7 @@ export function useAddFund() {
       source: string;
       amount: number;
     }) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
       const supabase = createClient();
       const {
         data: { user },
@@ -150,6 +167,7 @@ export function useAddFund() {
         .from("budget_funds")
         .insert({
           user_id: user.id,
+          wedding_id: weddingId,
           description: source,
           amount,
           date: new Date().toISOString().split("T")[0],
@@ -160,7 +178,7 @@ export function useAddFund() {
       return data as BudgetFund;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budget_funds"] });
+      queryClient.invalidateQueries({ queryKey: ["budget_funds", weddingId] });
     },
   });
 }

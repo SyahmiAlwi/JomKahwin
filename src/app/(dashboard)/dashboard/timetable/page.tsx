@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Clock, User, FileText, Trash2, Edit3, CalendarDays, ChevronDown } from "lucide-react";
+import { useWedding } from "@/components/providers/wedding-provider";
 
 type Category = "Solemnization" | "Resepsi" | "Doa" | "Makan" | "Hiburan" | "Lain-lain";
 
@@ -43,6 +44,7 @@ const initialSlots: Slot[] = [
 const EMPTY_FORM = { time: "", activity: "", pic: "", notes: "", category: "Resepsi" as Category };
 
 export default function TimetablePage() {
+    const { isLoading: weddingLoading } = useWedding();
     const [slots, setSlots] = useState<Slot[]>(initialSlots);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
@@ -88,6 +90,14 @@ export default function TimetablePage() {
         const h12 = h % 12 || 12;
         return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
     };
+
+    if (weddingLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 pb-24">

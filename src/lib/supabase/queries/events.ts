@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useWedding } from "@/components/providers/wedding-provider";
 
 export type DbEvent = {
   id: string;
   user_id: string;
+  wedding_id: string | null;
   name: string;
   date: string | null;
   type: string | null;
@@ -19,13 +21,16 @@ export type NewEvent = {
 // ── Queries ──────────────────────────────────────────────────
 
 export function useEvents() {
+  const { weddingId } = useWedding();
   return useQuery({
-    queryKey: ["events"],
+    queryKey: ["events", weddingId],
+    enabled: !!weddingId,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("events")
         .select("*")
+        .eq("wedding_id", weddingId!)
         .order("date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as DbEvent[];
@@ -37,8 +42,10 @@ export function useEvents() {
 
 export function useAddEvent() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async (event: NewEvent) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
       const supabase = createClient();
       const {
         data: { user },
@@ -47,20 +54,48 @@ export function useAddEvent() {
 
       const { data, error } = await supabase
         .from("events")
-        .insert({ ...event, user_id: user.id })
+        .insert({ ...event, user_id: user.id, wedding_id: weddingId })
         .select()
         .single();
       if (error) throw error;
       return data as DbEvent;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["events", weddingId] });
+    },
+  });
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
+  return useMutation({
+    mutationFn: async (updates: {
+      id: string;
+      name?: string;
+      date?: string;
+      type?: string;
+    }) => {
+      const supabase = createClient();
+      const { id, ...rest } = updates;
+      const { data, error } = await supabase
+        .from("events")
+        .update(rest)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as DbEvent;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", weddingId] });
     },
   });
 }
 
 export function useDeleteEvent() {
   const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient();
@@ -68,7 +103,7 @@ export function useDeleteEvent() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["events", weddingId] });
     },
   });
 }
