@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "@/components/ui/mobile-sidebar";
+import { WeddingProvider } from "@/components/providers/wedding-provider";
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
     children,
 }: {
     children: React.ReactNode;
@@ -13,6 +15,10 @@ export default function DashboardLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [clickSidebarOpen, setClickSidebarOpen] = useState(false);
     const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Check onboarding status
+    const [mounted, setMounted] = useState(false);
+    const router = useRouter();
 
     // Open sidebar immediately and clear any pending close timeout
     const openSidebar = () => {
@@ -38,6 +44,17 @@ export default function DashboardLayout({
             }
         };
     }, []);
+
+    // Check if onboarding is completed
+    useEffect(() => {
+        setMounted(true);
+        const onboardingCompleted = localStorage.getItem("onboarding_completed");
+        if (!onboardingCompleted) {
+            router.push("/onboarding");
+        }
+    }, [router]);
+
+    if (!mounted) return null;
 
     return (
         <div className="min-h-screen bg-background flex">
@@ -100,9 +117,19 @@ export default function DashboardLayout({
 
                 {/* Main Content */}
                 <main className="p-4 md:p-8 flex-1">
-                    {children}
+                    <WeddingProvider>
+                        {children}
+                    </WeddingProvider>
                 </main>
             </div>
         </div>
     );
+}
+
+export default function DashboardLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return <DashboardLayoutContent>{children}</DashboardLayoutContent>;
 }
