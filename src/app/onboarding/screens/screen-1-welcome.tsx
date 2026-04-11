@@ -52,11 +52,11 @@ export default function Screen1Welcome() {
           </div>
 
           <h1 className="font-heading text-4xl font-bold text-white leading-tight mb-3">
-            Majlis Impian,<br />
-            <span className="text-gradient-primary">Tanpa Stress</span>
+            Majlis Kita,<br />
+            <span className="text-gradient-primary">Dalam satu platform!</span>
           </h1>
           <p className="text-white/55 text-base leading-relaxed max-w-xs mx-auto">
-            Organize setiap ringgit dalam satu tempat. Pasangan always tahu apa happening.
+            Organize setiap ringgit dalam suatu tempat. Partner always up-to-date!.
           </p>
         </motion.div>
       </div>
@@ -72,7 +72,7 @@ export default function Screen1Welcome() {
       <div className="flex-1 px-6 -mt-2 space-y-4 pb-6">
         {[
           { emoji: "💰", title: "Bajet Sekilas Pandang", desc: "Tahu berapa dah habis, berapa lagi ada." },
-          { emoji: "👥", title: "Senarai Tetamu Mudah", desc: "Manage jemputan mengikut kumpulan." },
+          { emoji: "👥", title: "Senarai RSVP Guest", desc: "Manage jemputan mengikut kumpulan." },
           { emoji: "✅", title: "Checklist Perkahwinan", desc: "Tak tertinggal satu pun persiapan." },
           { emoji: "💍", title: "Countdown Hari Istimewa", desc: "Lihat kiraan hari hingga majlis." },
         ].map((item, i) => (

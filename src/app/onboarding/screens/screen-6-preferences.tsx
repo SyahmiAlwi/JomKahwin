@@ -40,10 +40,10 @@ export default function Screen6Preferences() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Apa yang paling urgent nak atur duluan?
+            Apa yang paling urgent nak atur dulu?
           </h1>
           <p className="text-muted-foreground">
-            Pilih berapa yang important untuk anda — helps us tailor your experience
+            Pilih yang penting untuk korang. Help us tailor your experience!
           </p>
         </div>
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
 import { Share2, Copy, Check } from "lucide-react";
+import { Rock_3D } from "next/font/google";
 
 export default function Screen10Value() {
   const { state, completeOnboarding } = useOnboarding();
@@ -17,12 +18,12 @@ export default function Screen10Value() {
   const expenses = state.demoExpenses;
 
   const handleShare = async () => {
-    const text = `Tengok bajet majlis aku! JomKahwin helps organize everything. ${window.location.origin}`;
+    const text = `Sayang, ini budget majlis kita. I guna JomKahwin je untuk kita organize everything <3 ${window.location.origin}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Bajet Majlis Aku",
+          title: "Bajet Majlis Kita!",
           text: text,
         });
       } catch (e) {
@@ -61,10 +62,10 @@ export default function Screen10Value() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Ini lah bajet majlis anda!
+            Ini lah bajet majlis korang!
           </h1>
           <p className="text-muted-foreground">
-            Simpan, bagikan dengan pasangan, atau ubah nanti.
+            Simpan, share kat partner, atau customize nanti.
           </p>
         </div>
 
@@ -139,7 +140,7 @@ export default function Screen10Value() {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="text-sm text-muted-foreground"
         >
-          Masih ada RM {remaining.toLocaleString("en-MY")} for other categories. Good start! Sekarang bagikan dengan pasangan atau mulai add vendors.
+          Masih ada RM {remaining.toLocaleString("en-MY")} for other categories. Good start! Sekarang share kat pasangan atau mula add vendors.
         </motion.p>
 
         {/* Spacer */}
@@ -159,12 +160,12 @@ export default function Screen10Value() {
               </>
             ) : (
               <>
-                <Share2 className="w-4 h-4 mr-2" /> Bagikan dengan Pasangan
+                <Share2 className="w-4 h-4 mr-2" /> Share dengan partner! 💖
               </>
             )}
           </Button>
           <Button size="lg" className="w-full" onClick={handleContinue}>
-            Buka Dashboard
+            Lihat Dashboard!
           </Button>
         </div>
       </motion.div>

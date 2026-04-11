@@ -44,16 +44,16 @@ export default function KeepDataModal() {
       >
         {/* Headline */}
         <h1 className="text-2xl font-heading font-bold text-foreground">
-          Simpan contoh bajet anda?
+          Save contoh bajet anda?
         </h1>
         <p className="text-muted-foreground">
-          Mulai dari sini atau start fresh dengan bajet kosong.
+          Sambung dari sini atau start fresh dengan bajet kosong.
         </p>
 
         {/* Preview of demo items */}
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase">
-            Your demo expenses:
+            Your expenses so far:
           </p>
           {state.demoExpenses.map((expense, idx) => (
             <div key={idx} className="flex justify-between text-sm">
@@ -93,7 +93,7 @@ export default function KeepDataModal() {
             onClick={() => handleDecision("keep")}
             disabled={autoSelect && selectedOption !== "keep"}
           >
-            Yes, Simpan
+            Yes, Simpan!
           </Button>
         </div>
       </motion.div>

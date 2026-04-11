@@ -39,9 +39,9 @@ export default function Screen2Goal() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Apa benda yang paling buat pening dalam merancang majlis?
+            Apa benda yang buat pening dalam merancang majlis?
           </h1>
-          <p className="text-muted-foreground">Terus jujur, so we tailor JomKahwin untuk anda.</p>
+          <p className="text-muted-foreground">Jujur je, kita tailor JomKahwin! untuk anda.</p>
         </div>
 
         {/* Options */}

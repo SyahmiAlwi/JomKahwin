@@ -28,7 +28,7 @@ export default function Screen8Processing() {
         {/* Animated spinner */}
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           className="relative w-20 h-20"
         >
           <div className="w-full h-full rounded-full border-4 border-primary/20 border-t-primary" />
@@ -45,7 +45,7 @@ export default function Screen8Processing() {
             Menyediakan rancangan majlis anda...
           </h1>
           <p className="text-muted-foreground">
-            Tunggu chill, kami organize semuanya untuk anda
+            Chill jap, kami organize semuanya untuk anda
           </p>
         </motion.div>
       </div>

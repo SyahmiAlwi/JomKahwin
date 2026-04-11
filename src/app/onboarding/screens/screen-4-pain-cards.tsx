@@ -8,11 +8,11 @@ import { ProgressBar } from "@/components/onboarding/progress-bar";
 import { X, Check } from "lucide-react";
 
 const PAIN_CARDS = [
-  "Quote vendor baru datang, stress level terus naik",
-  "Aku & pasangan disagree pasal bajet — gaduh je lepas tu",
-  "Bajet dah over but I didn't realize sampai terlambat",
-  "Checklist endless, aku tak tahu start dari mana",
-  "Guest list besar macam organisasi — siapa confirm siapa pending keliru",
+  "Quotation vendor baru datang, cortisol level terus naik!",
+  "Aku & pasangan disagree pasal bajet, gaduh je lepas tu",
+  "Alamak dah overbudget! Tak sedar sampaila dah terlambat!",
+  "Checklist berlambak, aku taktahu start dari mana",
+  "RSVP Guest list besar gedabak. Siapa confirm siapa pending??? Keliru.",
 ];
 
 export default function Screen4PainCards() {
@@ -52,10 +52,10 @@ export default function Screen4PainCards() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Swipe kanan (✓) kalau relate, kiri (✗) kalau tidak
+            Pain point bila merancang majlis?
           </h1>
           <p className="text-muted-foreground">
-            Tak perlu jawab semua, just swipe yang hit dekat hati
+            Swipe kanan (✓) kalau relate, kiri (✗) kalau tak
           </p>
         </div>
 

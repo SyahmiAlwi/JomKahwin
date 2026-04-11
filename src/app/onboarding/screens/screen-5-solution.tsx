@@ -34,7 +34,7 @@ export default function Screen5Solution() {
             Macam mana JomKahwin selesaikan masalah ni?
           </h1>
           <p className="text-muted-foreground">
-            Kami paham pain points anda. Tengok solutions kami:
+            Kami paham pain points korang. Tengok solutions kami:
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function Screen5Solution() {
 
         {/* Button */}
         <Button size="lg" className="w-full" onClick={nextScreen}>
-          Jom Tengok Demo
+          Jom Tengok Demo!
         </Button>
       </motion.div>
     </div>

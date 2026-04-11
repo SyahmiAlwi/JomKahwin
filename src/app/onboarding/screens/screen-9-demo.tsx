@@ -79,7 +79,7 @@ export default function Screen9Demo() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Mari tambah expenses majlis anda
+            Okjom tambah expenses majlis korang
           </h1>
           <p className="text-muted-foreground">
             Pick 3 categories to start. We'll auto-calculate the total.
