@@ -114,12 +114,12 @@ export default function ChecklistPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Senarai Semak</h1>
-          <p className="text-muted-foreground">Jangan tertinggal sebarang persiapan penting.</p>
+          <p className="text-muted-foreground text-sm">Jangan tertinggal sebarang persiapan penting.</p>
         </div>
         <Button
           onClick={() => setIsDialogOpen(true)}
           size="icon"
-          className="rounded-full h-12 w-12 bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90"
+          className="rounded-full h-12 w-12 shadow-rose-md"
         >
           <Plus className="h-6 w-6" />
         </Button>
@@ -128,13 +128,13 @@ export default function ChecklistPage() {
       {/* Timeline View */}
       <div className="relative space-y-12 pl-4 md:pl-0">
         {/* Vertical Line */}
-        <div className="absolute left-4 md:left-[8.5rem] top-4 bottom-0 w-0.5 bg-gradient-to-b from-primary/50 to-transparent hidden md:block" />
+        <div className="absolute left-4 md:left-[8.5rem] top-4 bottom-0 w-0.5 bg-gradient-to-b from-primary/40 via-primary/15 to-transparent hidden md:block" />
 
         {phases.map((phase, phaseIndex) => (
           <div key={phase.id} className="relative md:grid md:grid-cols-[8rem_1fr] gap-8">
             {/* Phase Title */}
             <div className="mb-4 md:mb-0 md:text-right sticky top-24 self-start">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 text-secondary-foreground text-sm font-medium border border-secondary">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs font-semibold border border-border uppercase tracking-wider">
                 <Clock className="h-3 w-3" />
                 {phase.title}
               </div>

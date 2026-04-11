@@ -81,8 +81,19 @@ export function AuthForm() {
     // on success: browser redirects, no need to setGoogleLoading(false)
   }
 
+  const headings = {
+    login: { title: "Selamat Datang", subtitle: "Log masuk untuk meneruskan perancangan anda." },
+    register: { title: "Cipta Akaun", subtitle: "Mulakan perjalanan perkahwinan anda hari ini." },
+    forgot: { title: "Lupa Kata Laluan?", subtitle: "Kami akan hantar pautan reset ke emel anda." },
+  };
+
   return (
-    <div className="w-full max-w-sm mx-auto flex flex-col gap-6">
+    <div className="w-full flex flex-col gap-6">
+      {/* Form heading */}
+      <div>
+        <h2 className="font-heading text-2xl font-bold text-foreground">{headings[mode].title}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{headings[mode].subtitle}</p>
+      </div>
 
       {/* Google OAuth */}
       <Button
@@ -106,7 +117,7 @@ export function AuthForm() {
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground">atau</span>
+        <span className="text-xs text-muted-foreground font-medium">atau</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 

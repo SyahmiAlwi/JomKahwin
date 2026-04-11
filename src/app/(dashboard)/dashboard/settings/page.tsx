@@ -198,35 +198,44 @@ export default function SettingsPage() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-heading font-bold text-foreground">Tetapan</h1>
-                <p className="text-muted-foreground">Urus profil dan pilihan aplikasi anda.</p>
+                <p className="text-muted-foreground text-sm">Urus profil dan pilihan aplikasi anda.</p>
             </div>
 
-            {/* Profile Section */}
-            <Card className="p-6 flex items-center gap-4 border-border/50">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-2xl font-bold shrink-0">
-                    {initials}
+            {/* Profile Hero Card */}
+            <div
+                className="relative rounded-2xl overflow-hidden p-6"
+                style={{ background: "linear-gradient(135deg, #1A0818 0%, #2D1030 100%)" }}
+            >
+                <div className="absolute inset-0 bg-batik-dark pointer-events-none opacity-70" />
+                <div className="absolute right-0 top-0 w-48 h-48 bg-primary/20 blur-3xl pointer-events-none rounded-full" />
+                <div className="relative z-10 flex items-center gap-5">
+                    <div className="h-16 w-16 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-white text-2xl font-bold font-heading shrink-0 overflow-hidden">
+                        {user?.user_metadata?.avatar_url ? (
+                            <img src={user.user_metadata.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+                        ) : initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-heading font-bold text-white truncate">{displayName}</h3>
+                        <p className="text-white/50 text-sm truncate">{displayEmail}</p>
+                    </div>
+                    <Button
+                        variant="secondary"
+                        onClick={openEditDialog}
+                        className="shrink-0 bg-white/15 hover:bg-white/25 text-white border-white/20 backdrop-blur-sm"
+                    >
+                        Edit Profil
+                    </Button>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-foreground truncate">{displayName}</h3>
-                    <p className="text-muted-foreground text-sm truncate">{displayEmail}</p>
-                </div>
-                <Button
-                    variant="outline"
-                    onClick={openEditDialog}
-                    className="rounded-full border-primary/20 text-primary hover:bg-primary/5 shrink-0"
-                >
-                    Edit Profil
-                </Button>
-            </Card>
+            </div>
 
             {/* Settings Groups */}
             <div className="space-y-6">
                 {/* App Settings */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Aplikasi</h4>
-                    <Card className="divide-y divide-border/50 border-border/50 overflow-hidden">
+                    <Card className="divide-y divide-border overflow-hidden border-border p-0">
                         {/* Notifications */}
-                        <div className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                        <div className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
                                     <Bell className="h-4 w-4" />
@@ -296,7 +305,7 @@ export default function SettingsPage() {
                 {/* Collaboration Section */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Pasangan & Kerjasama</h4>
-                    <Card className="p-6 border-border/50 space-y-5">
+                    <Card className="p-6 border-border space-y-5">
                         {weddingLoading ? (
                             <div className="flex items-center justify-center py-6">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
@@ -408,7 +417,7 @@ export default function SettingsPage() {
                 {/* Account Settings */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Akaun</h4>
-                    <Card className="divide-y divide-border/50 border-border/50 overflow-hidden">
+                    <Card className="divide-y divide-border overflow-hidden border-border p-0">
                         {/* Change password */}
                         <button
                             type="button"

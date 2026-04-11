@@ -363,12 +363,12 @@ export default function GuestListPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Senarai Tetamu</h1>
-          <p className="text-muted-foreground">Urus jemputan mengikut kumpulan dan pax.</p>
+          <p className="text-muted-foreground text-sm">Urus jemputan mengikut kumpulan dan pax.</p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => setIsAddGuestOpen(true)}
-            className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 rounded-full px-6"
+            className="rounded-full px-6"
           >
             <UserPlus className="h-5 w-5 mr-2" />
             Tambah Tetamu

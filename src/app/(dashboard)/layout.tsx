@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "@/components/ui/mobile-sidebar";
 import { WeddingProvider } from "@/components/providers/wedding-provider";
+import { useUser } from "@/components/providers/user-provider";
 
 function DashboardLayoutContent({
     children,
@@ -15,12 +16,17 @@ function DashboardLayoutContent({
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [clickSidebarOpen, setClickSidebarOpen] = useState(false);
     const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Check onboarding status
     const [mounted, setMounted] = useState(false);
     const router = useRouter();
+    const { user } = useUser();
 
-    // Open sidebar immediately and clear any pending close timeout
+    const displayName =
+        user?.user_metadata?.full_name ??
+        user?.email?.split("@")[0] ??
+        "?";
+    const initials = displayName.charAt(0).toUpperCase();
+    const avatarUrl = user?.user_metadata?.avatar_url;
+
     const openSidebar = () => {
         if (closeTimeoutRef.current) {
             clearTimeout(closeTimeoutRef.current);
@@ -29,14 +35,12 @@ function DashboardLayoutContent({
         setSidebarOpen(true);
     };
 
-    // Schedule sidebar close with 350ms delay
     const scheduleSidebarClose = () => {
         closeTimeoutRef.current = setTimeout(() => {
             setSidebarOpen(false);
         }, 350);
     };
 
-    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (closeTimeoutRef.current) {
@@ -45,7 +49,6 @@ function DashboardLayoutContent({
         };
     }, []);
 
-    // Check if onboarding is completed
     useEffect(() => {
         setMounted(true);
         const onboardingCompleted = localStorage.getItem("onboarding_completed");
@@ -58,16 +61,16 @@ function DashboardLayoutContent({
 
     return (
         <div className="min-h-screen bg-background flex">
-            {/* Desktop: Hover-based Sidebar (hidden on mobile) */}
+            {/* Desktop: Hover-based Sidebar */}
             <aside
                 onMouseEnter={openSidebar}
                 onMouseLeave={scheduleSidebarClose}
                 className={`
                     hidden md:block
-                    bg-white border-r border-border relative z-50 overflow-hidden
+                    relative z-50 overflow-hidden
                     transition-[transform,width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]
                     ${sidebarOpen
-                        ? 'w-64 translate-x-0 shadow-2xl shadow-black/10'
+                        ? 'w-64 translate-x-0 shadow-dark-lg'
                         : 'w-0 -translate-x-6 pointer-events-none shadow-none'
                     }
                 `}
@@ -87,7 +90,7 @@ function DashboardLayoutContent({
                 </div>
             </aside>
 
-            {/* Mobile: Click-to-open Modal Sidebar (visible only on mobile) */}
+            {/* Mobile: Click-to-open Modal Sidebar */}
             <div className="md:hidden">
                 <MobileSidebar
                     isOpen={clickSidebarOpen}
@@ -99,24 +102,36 @@ function DashboardLayoutContent({
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-30">
-                    {/* Desktop: Hover to open, Mobile: Click to open */}
+                <header className="flex items-center justify-between px-5 py-3 bg-white border-b border-border sticky top-0 z-30 shadow-sm">
                     <Button
                         variant="ghost"
                         size="icon"
                         onMouseEnter={openSidebar}
                         onMouseLeave={scheduleSidebarClose}
                         onClick={() => setClickSidebarOpen(true)}
-                        className="hover:bg-primary/10"
+                        className="hover:bg-primary/8 rounded-xl"
                     >
-                        <Menu />
+                        <Menu className="h-5 w-5 text-foreground/70" />
                     </Button>
-                    <span className="font-heading font-bold text-xl text-primary">JomKahwin!</span>
-                    <div className="w-10" /> {/* Spacer for centering */}
-                </div>
+
+                    {/* Brand */}
+                    <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-primary fill-primary/30" />
+                        <span className="font-heading font-bold text-lg text-primary tracking-wide">JomKahwin!</span>
+                    </div>
+
+                    {/* User avatar */}
+                    <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-primary/20 bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 select-none">
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                            initials
+                        )}
+                    </div>
+                </header>
 
                 {/* Main Content */}
-                <main className="p-4 md:p-8 flex-1">
+                <main className="p-5 md:p-8 flex-1">
                     <WeddingProvider>
                         {children}
                     </WeddingProvider>

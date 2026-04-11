@@ -3,40 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --background: #CEE38E;
-  /* Pastel Green */
-  --foreground: #4A4E69;
-  /* Charcoal Grey */
+  --background: #FAF6F1;
+  /* Warm ivory — replaces the loud pastel green */
+  --foreground: #2E1A35;
+  /* Deep wine-charcoal */
 
-  --primary: #FFAFCC;
-  /* Soft Pink */
+  --primary: #C95A78;
+  /* Refined rose */
   --primary-foreground: #FFFFFF;
 
-  --secondary: #FFFFFF;
-  /* White */
-  --secondary-foreground: #4A4E69;
+  --secondary: #F5ECE6;
+  /* Warm blush cream */
+  --secondary-foreground: #2E1A35;
 
-  --accent: #FFFFFF;
-  /* White */
-  --accent-foreground: #4A4E69;
+  --accent: #C08040;
+  /* Champagne/warm gold */
+  --accent-foreground: #FFFFFF;
 
-  --muted: #FDE2E4;
-  /* Pale Pink */
-  --muted-foreground: #9A8C98;
+  --muted: #F0E8E0;
+  /* Warm muted cream */
+  --muted-foreground: #8B7B80;
+  /* Warm mauve grey */
 
   --card: #FFFFFF;
-  --card-foreground: #4A4E69;
+  --card-foreground: #2E1A35;
 
-  --border: #FFFFFF;
-  /* White Border */
+  --border: #E8DDD5;
+  /* Warm beige border */
   --input: #FFFFFF;
-  --ring: #FFAFCC;
+  --ring: #C95A78;
 
   --radius: 1.5rem;
-  /* Softer corners */
+
+  /* Sidebar tokens */
+  --sidebar-bg-from: #1A0818;
+  --sidebar-bg-to: #2D1030;
+  --sidebar-accent: #C95A78;
 }
-
-
 
 body {
   color: var(--foreground);
@@ -47,7 +50,7 @@ body {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -55,48 +58,89 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--muted-foreground);
-  border-radius: 4px;
+  background: #D9CEC8;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
+  background: var(--primary);
 }
 
-/* Utility Classes for Malay Aesthetic */
+/* Font utility */
 .font-heading {
   font-family: var(--font-heading);
 }
 
-/* Premium Batik Pattern */
+/* Batik Pattern — white on light backgrounds */
 .bg-batik-pattern {
   background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C95A78' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Batik Pattern — rose on dark backgrounds (sidebar, login) */
+.bg-batik-dark {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C95A78' fill-opacity='0.18'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Glassmorphism */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
 }
 
-
-
-/* Gradient Text */
-/* Gradient Text */
-/* Gradient Text */
+/* Gradient Text Utilities */
 .text-gradient-accent {
-  background: linear-gradient(135deg, #FFFFFF 0%, #FAFAF5 100%);
+  background: linear-gradient(135deg, #F5ECE6 0%, #FFFFFF 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-primary {
-  background: linear-gradient(135deg, #FFAFCC 0%, #FFC8DD 100%);
+  background: linear-gradient(135deg, #C95A78 0%, #E87A95 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #C08040 0%, #E0A060 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Shimmer effect for loading states */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.15) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+/* Standard keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }

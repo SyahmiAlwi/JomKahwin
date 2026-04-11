@@ -73,7 +73,7 @@ export default function ActivityPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Log Aktiviti</h1>
-          <p className="text-muted-foreground">Semua perubahan yang dibuat dalam perancangan perkahwinan anda.</p>
+          <p className="text-muted-foreground text-sm">Semua perubahan yang dibuat dalam perancangan perkahwinan anda.</p>
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export default function ActivityPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04 }}
               >
-                <Card className="p-4 flex items-center gap-4 border-border/40 bg-white/80 hover:shadow-md transition-shadow">
+                <Card className="p-4 flex items-center gap-4 border-border bg-white hover:shadow-md transition-shadow">
                   {/* Avatar */}
                   <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
                     {member?.avatar_url ? (

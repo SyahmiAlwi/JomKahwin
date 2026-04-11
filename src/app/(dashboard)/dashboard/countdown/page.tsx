@@ -159,11 +159,11 @@ export default function MajlisPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Urus Majlis</h1>
-          <p className="text-muted-foreground">Tambah dan urus semua majlis perkahwinan anda.</p>
+          <p className="text-muted-foreground text-sm">Tambah dan urus semua majlis perkahwinan anda.</p>
         </div>
         <Button
           onClick={openAdd}
-          className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 rounded-full px-6 w-fit"
+          className="rounded-full px-6 w-fit"
         >
           <Plus className="h-5 w-5 mr-2" />
           Tambah Majlis

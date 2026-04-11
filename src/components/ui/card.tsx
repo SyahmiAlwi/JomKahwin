@@ -8,22 +8,22 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
     ({ className, variant = "default", ...props }, ref) => {
         const variants = {
-            default: "bg-card text-card-foreground border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-300",
-            songket: "bg-card text-card-foreground border-2 border-rose-200 relative overflow-hidden shadow-lg shadow-rose-100",
-            glass: "glass shadow-xl shadow-rose-500/5 hover:shadow-rose-500/10 transition-all duration-300",
-            gradient: "bg-gradient-to-br from-primary to-accent border-none shadow-lg",
+            default: "bg-card text-card-foreground border border-border shadow-sm hover:shadow-md transition-shadow duration-300",
+            songket: "bg-card text-card-foreground border border-rose-200 relative overflow-hidden shadow-rose-sm",
+            glass: "glass shadow-md hover:shadow-lg transition-all duration-300",
+            gradient: "bg-hero-gradient border-none text-white shadow-rose-lg",
         };
 
         return (
             <div
                 ref={ref}
-                className={cn("rounded-2xl p-6", variants[variant], className)}
+                className={cn("rounded-2xl", variants[variant], className)}
                 {...props}
             >
                 {variant === "songket" && (
                     <>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-batik-pattern opacity-20 pointer-events-none -mr-10 -mt-10 rotate-12" />
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-batik-pattern opacity-10 pointer-events-none -ml-8 -mb-8 -rotate-12" />
+                        <div className="absolute top-0 right-0 w-28 h-28 bg-batik-pattern opacity-100 pointer-events-none -mr-8 -mt-8 rotate-12" />
+                        <div className="absolute bottom-0 left-0 w-20 h-20 bg-batik-pattern opacity-70 pointer-events-none -ml-6 -mb-6 -rotate-12" />
                     </>
                 )}
                 {props.children}

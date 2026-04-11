@@ -138,19 +138,18 @@ export default function BudgetPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Bajet & Tabung</h1>
-          <p className="text-muted-foreground">Urus dana perkahwinan dan perbelanjaan anda.</p>
+          <p className="text-muted-foreground text-sm">Urus dana perkahwinan dan perbelanjaan anda.</p>
         </div>
         <div className="flex gap-2">
           <Button
+            variant="green"
             onClick={() => openDialog("fund")}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/25"
           >
             <ArrowUpCircle className="h-4 w-4 mr-2" />
             Tambah Dana
           </Button>
           <Button
             onClick={() => openDialog("expense")}
-            className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90"
           >
             <Plus className="h-4 w-4 mr-2" />
             Tambah Belanja
@@ -174,8 +173,8 @@ export default function BudgetPage() {
 
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="space-y-2">
-              <p className="text-primary-foreground/80 font-medium">Tabung Kahwin (Terkumpul)</p>
-              <h2 className="text-5xl font-bold text-white tracking-tight">
+              <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Tabung Kahwin Terkumpul</p>
+              <h2 className="text-5xl font-bold text-white tracking-tight mt-1">
                 RM {totalBudget.toLocaleString()}
               </h2>
               <div className="flex flex-col gap-1 text-white/90 text-sm mt-2">
@@ -293,12 +292,12 @@ export default function BudgetPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.4 }}
               >
-                <div className="bg-white p-4 rounded-xl border border-border/50 flex justify-between items-center shadow-sm">
+                <div className="bg-white p-4 rounded-xl border border-border flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
                   <div>
-                    <p className="font-bold text-sm text-foreground">{fund.source}</p>
+                    <p className="font-semibold text-sm text-foreground">{fund.source}</p>
                     <p className="text-xs text-muted-foreground">{fund.date}</p>
                   </div>
-                  <span className="text-accent-foreground font-bold text-sm bg-accent/90 px-2 py-1 rounded-md shadow-sm">
+                  <span className="text-accent-foreground font-bold text-sm bg-accent px-3 py-1.5 rounded-lg shadow-gold-sm">
                     + RM {fund.amount.toLocaleString()}
                   </span>
                 </div>

@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { CheckSquare, Users, Wallet, Plus } from "lucide-react";
+import { CheckSquare, Users, Wallet, Plus, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/components/providers/user-provider";
@@ -28,8 +28,6 @@ import {
 import { useWedding } from "@/components/providers/wedding-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
-
-// ── Countdown helper ──────────────────────────────────────────
 
 type TimeLeft = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -52,19 +50,16 @@ export default function DashboardPage() {
     const { user } = useUser();
     const { weddingId, isLoading: weddingLoading } = useWedding();
 
-    // ── Data queries ──────────────────────────────────────────
     const { data: events = [], isLoading: eventsLoading } = useEvents();
     const { data: guests = [] } = useGuests();
     const { data: categories = [] } = useBudgetCategories();
     const { data: tasks = [] } = useChecklistTasks();
 
-    // ── Derived stats ─────────────────────────────────────────
     const totalBudget = categories.reduce((sum, c) => sum + c.allocated, 0);
     const totalGuests = guests.reduce((sum, g) => sum + g.pax, 0);
     const completedTasks = tasks.filter((t) => t.completed).length;
     const totalTasks = tasks.length;
 
-    // ── Nearest upcoming event + live countdown ───────────────
     const nextEvent = useMemo(
         () =>
             events
@@ -83,7 +78,6 @@ export default function DashboardPage() {
         return () => clearInterval(id);
     }, [nextEvent?.date]);
 
-    // ── Add-event dialog state ────────────────────────────────
     const [dialogOpen, setDialogOpen] = useState(false);
     const [newName, setNewName] = useState("");
     const [newDate, setNewDate] = useState("");
@@ -104,9 +98,7 @@ export default function DashboardPage() {
             });
             toast({ title: "Majlis berjaya ditambah!", variant: "default" });
             setDialogOpen(false);
-            setNewName("");
-            setNewDate("");
-            setNewType(EVENT_TYPES[0]);
+            setNewName(""); setNewDate(""); setNewType(EVENT_TYPES[0]);
             if (weddingId && user) {
                 const supabase = createClient();
                 await logActivity({
@@ -120,7 +112,6 @@ export default function DashboardPage() {
         }
     };
 
-    // ── Display name ──────────────────────────────────────────
     const displayName =
         user?.user_metadata?.full_name ??
         user?.email?.split("@")[0] ??
@@ -129,20 +120,80 @@ export default function DashboardPage() {
     if (weddingLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
             </div>
         );
     }
 
     return (
-        <div className="space-y-10 pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                    <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-                        Hai, {displayName}
-                    </h1>
+        <div className="space-y-8 pb-20">
+
+            {/* ── Hero Greeting ────────────────────────────────── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+            >
+                <div
+                    className="relative rounded-2xl overflow-hidden p-6"
+                    style={{ background: "linear-gradient(135deg, #1A0818 0%, #2D1030 60%, #3A1538 100%)" }}
+                >
+                    {/* Batik overlay */}
+                    <div className="absolute inset-0 bg-batik-dark pointer-events-none opacity-60" />
+                    {/* Glow */}
+                    <div className="absolute right-0 top-0 w-64 h-64 bg-primary/25 blur-3xl pointer-events-none rounded-full -translate-y-1/2 translate-x-1/4" />
+
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div>
+                            <p className="text-white/50 text-xs uppercase tracking-widest font-medium mb-1">
+                                Selamat Datang
+                            </p>
+                            <h1 className="text-2xl md:text-3xl font-heading font-bold text-white">
+                                Hai, {displayName}!
+                            </h1>
+                            <p className="text-white/50 text-sm mt-1.5">
+                                Semoga perancangan anda hari ini berjalan lancar.
+                            </p>
+                        </div>
+                        <div className="hidden md:flex h-14 w-14 rounded-full bg-white/10 border border-white/20 items-center justify-center shrink-0">
+                            <Heart className="h-6 w-6 text-primary fill-primary/40" />
+                        </div>
+                    </div>
                 </div>
+            </motion.div>
+
+            {/* ── Stats Row ────────────────────────────────────── */}
+            <div className="grid grid-cols-3 gap-3 md:gap-5">
+                {[
+                    {
+                        icon: Wallet,
+                        label: "Bajet",
+                        value: totalBudget > 0 ? `RM ${totalBudget.toLocaleString("ms-MY", { maximumFractionDigits: 0 })}` : "–",
+                        color: "bg-rose-50 text-rose-500",
+                    },
+                    {
+                        icon: CheckSquare,
+                        label: "Tugasan",
+                        value: totalTasks > 0 ? `${completedTasks}/${totalTasks}` : "–",
+                        color: "bg-amber-50 text-amber-500",
+                    },
+                    {
+                        icon: Users,
+                        label: "Jemputan",
+                        value: totalGuests > 0 ? String(totalGuests) : "–",
+                        color: "bg-sky-50 text-sky-500",
+                    },
+                ].map(({ icon: Icon, label, value, color }) => (
+                    <Card key={label} className="p-4 flex flex-col items-center gap-2 text-center border border-border">
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${color}`}>
+                            <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+                            <p className="text-lg font-bold text-foreground leading-tight">{value}</p>
+                        </div>
+                    </Card>
+                ))}
             </div>
 
             {/* ── Live Countdown ───────────────────────────────── */}
@@ -150,19 +201,18 @@ export default function DashboardPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
                 >
                     {nextEvent ? (
                         <Card
                             variant="gradient"
-                            className="p-6 md:p-8 text-white relative overflow-hidden border-none shadow-xl shadow-primary/20"
+                            className="p-6 md:p-8 relative overflow-hidden"
                         >
-                            {/* Background decoration */}
-                            <div className="absolute right-0 top-0 h-full w-1/4 bg-white/5 -skew-x-12 translate-x-8 pointer-events-none" />
+                            {/* Shimmer */}
+                            <div className="absolute inset-0 animate-shimmer pointer-events-none" />
 
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-6">
-                                {/* Event label */}
-                                <div className="md:min-w-[180px]">
+                                <div className="md:min-w-[200px]">
                                     <p className="text-white/60 text-xs uppercase tracking-widest font-medium mb-1">
                                         Kiraan Detik
                                     </p>
@@ -174,10 +224,8 @@ export default function DashboardPage() {
                                     )}
                                 </div>
 
-                                {/* Divider */}
                                 <div className="hidden md:block w-px h-16 bg-white/20" />
 
-                                {/* Countdown units */}
                                 <div className="flex items-end gap-2 md:gap-4">
                                     {(
                                         [
@@ -207,14 +255,14 @@ export default function DashboardPage() {
                             </div>
                         </Card>
                     ) : (
-                        <Card className="p-6 border-dashed border-2 border-border/50 flex items-center gap-4 bg-white/60">
+                        <Card className="p-6 border-dashed border-2 border-primary/20 flex items-center gap-4 bg-white">
                             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                 <span className="text-2xl">💍</span>
                             </div>
                             <div>
                                 <p className="font-heading font-semibold text-foreground">Tiada majlis akan datang</p>
                                 <p className="text-sm text-muted-foreground">
-                                    Pergi ke <span className="text-primary font-medium">Majlis</span> untuk tambah tarikh perkahwinan anda.
+                                    Tambah tarikh perkahwinan anda di bawah.
                                 </p>
                             </div>
                         </Card>
@@ -222,21 +270,16 @@ export default function DashboardPage() {
                 </motion.div>
             )}
 
-            {/* Countdown Section */}
+            {/* ── Events Grid ──────────────────────────────────── */}
             <section>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-heading font-bold text-foreground">Majlis Anda</h2>
-                    <Button variant="ghost" className="text-primary hover:bg-primary/5">Lihat Semua</Button>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-heading font-bold text-foreground">Majlis Anda</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {eventsLoading ? (
-                        /* skeleton placeholders */
                         [0, 1].map((i) => (
-                            <div
-                                key={i}
-                                className="h-28 rounded-2xl bg-muted/50 animate-pulse"
-                            />
+                            <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />
                         ))
                     ) : (
                         events.map((event, index) => {
@@ -245,20 +288,20 @@ export default function DashboardPage() {
                             return (
                                 <motion.div
                                     key={event.id}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 16 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
+                                    transition={{ delay: index * 0.08 }}
                                 >
                                     <Card
                                         variant="songket"
-                                        className="h-full flex flex-col justify-between p-4 group hover:-translate-y-1 transition-transform duration-300"
+                                        className="h-full flex flex-col justify-between p-5 group hover:-translate-y-1 transition-transform duration-300"
                                     >
-                                        <div className="relative z-10 flex justify-between items-center mb-2">
-                                            <h3 className="text-lg font-heading font-bold text-foreground">
+                                        <div className="relative z-10 flex justify-between items-start mb-3">
+                                            <h3 className="text-base font-heading font-bold text-foreground">
                                                 {event.name}
                                             </h3>
                                             {event.type && (
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent border border-accent/20">
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0 ml-2">
                                                     {event.type}
                                                 </span>
                                             )}
@@ -266,8 +309,8 @@ export default function DashboardPage() {
 
                                         <div className="relative z-10">
                                             {daysLeft !== null ? (
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-3xl font-bold text-primary">
+                                                <div className="flex items-baseline gap-1.5">
+                                                    <span className="text-3xl font-bold text-primary font-heading">
                                                         {daysLeft >= 0 ? daysLeft : 0}
                                                     </span>
                                                     <span className="text-xs text-muted-foreground font-medium">
@@ -285,21 +328,20 @@ export default function DashboardPage() {
                         })
                     )}
 
-                    {/* Add new event card */}
+                    {/* Add new event */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: events.length * 0.1 }}
+                        transition={{ delay: events.length * 0.08 }}
                     >
                         <Card
-                            variant="glass"
                             onClick={() => setDialogOpen(true)}
-                            className="h-full flex flex-col items-center justify-center border-dashed border-2 border-muted-foreground/20 hover:border-primary/50 cursor-pointer transition-all group bg-white/40 min-h-[7rem]"
+                            className="h-full flex flex-col items-center justify-center border-2 border-dashed border-primary/25 hover:border-primary/50 cursor-pointer transition-all group bg-white min-h-[7rem] p-5"
                         >
-                            <div className="h-16 w-16 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                <Plus className="h-8 w-8 text-muted-foreground group-hover:text-primary" />
+                            <div className="h-12 w-12 rounded-full bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors duration-300">
+                                <Plus className="h-6 w-6 text-primary/60 group-hover:text-primary" />
                             </div>
-                            <p className="mt-4 font-medium text-lg text-muted-foreground group-hover:text-primary">
+                            <p className="mt-3 font-medium text-sm text-muted-foreground group-hover:text-primary transition-colors">
                                 Tambah Majlis Baru
                             </p>
                         </Card>
@@ -307,48 +349,7 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            {/* Stats Grid */}
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card variant="glass" className="p-4 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0">
-                        <Wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bajet</p>
-                        <p className="text-xl font-bold text-foreground">
-                            {totalBudget > 0
-                                ? `RM ${totalBudget.toLocaleString("ms-MY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                                : "–"}
-                        </p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" className="p-4 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <CheckSquare className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tugasan</p>
-                        <p className="text-xl font-bold text-foreground">
-                            {totalTasks > 0 ? `${completedTasks} / ${totalTasks}` : "–"}
-                        </p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" className="p-4 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
-                        <Users className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Jemputan</p>
-                        <p className="text-xl font-bold text-foreground">
-                            {totalGuests > 0 ? totalGuests : "–"}
-                        </p>
-                    </div>
-                </Card>
-            </section>
-
-            {/* Add Majlis Dialog */}
+            {/* ── Add Majlis Dialog ─────────────────────────────── */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -365,7 +366,6 @@ export default function DashboardPage() {
                                 onChange={(e) => setNewName(e.target.value)}
                             />
                         </div>
-
                         <div className="space-y-1.5">
                             <Label htmlFor="event-date">Tarikh</Label>
                             <Input
@@ -375,7 +375,6 @@ export default function DashboardPage() {
                                 onChange={(e) => setNewDate(e.target.value)}
                             />
                         </div>
-
                         <div className="space-y-1.5">
                             <Label>Jenis Majlis</Label>
                             <div className="flex gap-2">
@@ -384,10 +383,10 @@ export default function DashboardPage() {
                                         key={type}
                                         type="button"
                                         onClick={() => setNewType(type)}
-                                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                                             newType === type
-                                                ? "bg-primary text-white border-primary"
-                                                : "bg-background text-foreground border-input hover:border-primary/50"
+                                                ? "bg-primary text-white border-primary shadow-rose-sm"
+                                                : "bg-white text-foreground border-border hover:border-primary/40"
                                         }`}
                                     >
                                         {type}
