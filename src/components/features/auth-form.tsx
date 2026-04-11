@@ -47,6 +47,9 @@ export function AuthForm() {
           description: "Sila semak emel anda untuk pengesahan.",
           variant: "success",
         });
+        setMode("login");
+        setPassword("");
+        setFullName("");
 
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
