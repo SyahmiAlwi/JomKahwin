@@ -182,3 +182,111 @@ export function useAddFund() {
     },
   });
 }
+
+export function useUpdateExpenseCategory() {
+  const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      amount,
+      total,
+    }: {
+      id: string;
+      name: string;
+      amount: number;
+      total: number;
+    }) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
+      const supabase = createClient();
+      
+      const { error: catErr } = await supabase
+        .from("budget_categories")
+        .update({ name, allocated: total })
+        .eq("id", id);
+      if (catErr) throw catErr;
+
+      // When updating, we assume a simple 1:1 relation as created by useAddExpenseCategory
+      // If there are multiple expenses under this category, this logic might need refinement.
+      // For now, we update the first matching expense (or all of them, but usually it's one per category in this simplified UI).
+      const { error: expErr } = await supabase
+        .from("budget_expenses")
+        .update({ description: name, amount })
+        .eq("category_id", id);
+      if (expErr) throw expErr;
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget_categories", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_expenses", weddingId] });
+    },
+  });
+}
+
+export function useDeleteExpenseCategory() {
+  const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
+      const supabase = createClient();
+      
+      // Delete expenses first to prevent foreign key errors if cascade isn't on
+      await supabase.from("budget_expenses").delete().eq("category_id", id);
+      const { error } = await supabase.from("budget_categories").delete().eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget_categories", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_expenses", weddingId] });
+    },
+  });
+}
+
+export function useUpdateFund() {
+  const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      source,
+      amount,
+    }: {
+      id: string;
+      source: string;
+      amount: number;
+    }) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("budget_funds")
+        .update({ description: source, amount })
+        .eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget_funds", weddingId] });
+    },
+  });
+}
+
+export function useDeleteFund() {
+  const queryClient = useQueryClient();
+  const { weddingId } = useWedding();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!weddingId) throw new Error("Wedding not loaded");
+      const supabase = createClient();
+      const { error } = await supabase.from("budget_funds").delete().eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget_funds", weddingId] });
+    },
+  });
+}
