@@ -29,6 +29,7 @@ import {
   useUpdateFund,
   useDeleteFund,
 } from "@/lib/supabase/queries/budget";
+import { useVendors } from "@/lib/supabase/queries/vendors";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { useUser } from "@/components/providers/user-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -42,6 +43,7 @@ export default function BudgetPage() {
   const { data: categories = [] } = useBudgetCategories();
   const { data: expenses = [] } = useBudgetExpenses();
   const { data: funds = [] } = useBudgetFunds();
+  const { data: vendors = [] } = useVendors();
 
   const addExpenseMutation = useAddExpenseCategory();
   const updateExpenseMutation = useUpdateExpenseCategory();
@@ -60,20 +62,37 @@ export default function BudgetPage() {
 
   const { toast } = useToast();
 
-  // Join categories with their aggregated spent amounts
+  // Aggregate vendor amount_paid by budget category
+  const vendorAmountByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const v of vendors) {
+      if (v.budget_category_id && v.amount_paid > 0) {
+        map[v.budget_category_id] = (map[v.budget_category_id] ?? 0) + v.amount_paid;
+      }
+    }
+    return map;
+  }, [vendors]);
+
+  // Join categories with their aggregated spent amounts (manual + vendor)
   const displayExpenses = useMemo(
     () =>
-      categories.map((cat) => ({
-        id: cat.id,
-        category: cat.name,
-        amount: expenses
+      categories.map((cat) => {
+        const manualAmount = expenses
           .filter((e) => e.category_id === cat.id)
-          .reduce((sum, e) => sum + e.amount, 0),
-        total: cat.allocated,
-        color: cat.color || "text-blue-500 bg-blue-100",
-        icon: DollarSign,
-      })),
-    [categories, expenses]
+          .reduce((sum, e) => sum + e.amount, 0);
+        const vendorAmount = vendorAmountByCategory[cat.id] ?? 0;
+        return {
+          id: cat.id,
+          category: cat.name,
+          amount: manualAmount + vendorAmount,
+          manualAmount,
+          vendorAmount,
+          total: cat.allocated,
+          color: cat.color || "text-blue-500 bg-blue-100",
+          icon: DollarSign,
+        };
+      }),
+    [categories, expenses, vendorAmountByCategory]
   );
 
   const displayFunds = useMemo(
@@ -343,7 +362,7 @@ export default function BudgetPage() {
                         className="bg-primary h-full rounded-full"
                         initial={{ width: 0 }}
                         animate={{
-                          width: `${expense.total > 0 ? (expense.amount / expense.total) * 100 : 0}%`,
+                          width: `${expense.total > 0 ? Math.min((expense.amount / expense.total) * 100, 100) : 0}%`,
                         }}
                         transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
                       />
@@ -357,6 +376,12 @@ export default function BudgetPage() {
                       </span>
                       <span>Daripada RM {expense.total.toLocaleString()}</span>
                     </div>
+                    {expense.vendorAmount > 0 && (
+                      <p className="text-xs text-primary mt-1.5 flex items-center gap-1">
+                        <span>🔗</span>
+                        Termasuk RM {expense.vendorAmount.toLocaleString()} dari vendor
+                      </p>
+                    )}
                   </div>
                 </div>
               </Card>

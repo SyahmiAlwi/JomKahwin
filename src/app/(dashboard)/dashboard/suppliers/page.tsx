@@ -7,45 +7,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Search, Phone, DollarSign, CheckCircle2, Clock, Star, Trash2, Edit3, Store, TrendingUp, Wallet } from "lucide-react";
+import {
+    Plus, Search, Phone, DollarSign, CheckCircle2, Clock, Star,
+    Trash2, Edit3, Store, TrendingUp, Wallet, Link2,
+} from "lucide-react";
 import { useWedding } from "@/components/providers/wedding-provider";
+import {
+    useVendors, useAddVendor, useUpdateVendor, useDeleteVendor,
+    type Vendor, type VendorInput,
+} from "@/lib/supabase/queries/vendors";
+import { useBudgetCategories } from "@/lib/supabase/queries/budget";
 
 type Category = "Katering" | "Fotografi" | "Videografi" | "Dekorasi" | "Busana" | "Pelamin" | "Hiburan" | "Lain-lain";
 type Status = "Booked" | "Contacted" | "Shortlisted";
 
-interface Vendor {
-    id: number;
-    name: string;
-    category: Category;
-    phone: string;
-    estimatedPrice: number;
-    depositPaid: number;
-    status: Status;
-    notes: string;
-}
-
 const CATEGORIES: Category[] = ["Katering", "Fotografi", "Videografi", "Dekorasi", "Busana", "Pelamin", "Hiburan", "Lain-lain"];
 
 const CATEGORY_ICONS: Record<Category, string> = {
-    Katering:   "🍽️",
-    Fotografi:  "📸",
-    Videografi: "🎬",
-    Dekorasi:   "🌸",
-    Busana:     "👗",
-    Pelamin:    "💍",
-    Hiburan:    "🎶",
-    "Lain-lain":"📦",
+    Katering:    "🍽️",
+    Fotografi:   "📸",
+    Videografi:  "🎬",
+    Dekorasi:    "🌸",
+    Busana:      "👗",
+    Pelamin:     "💍",
+    Hiburan:     "🎶",
+    "Lain-lain": "📦",
 };
 
 const CATEGORY_COLORS: Record<Category, string> = {
-    Katering:   "bg-amber-50 text-amber-700 border-amber-200",
-    Fotografi:  "bg-sky-50 text-sky-700 border-sky-200",
-    Videografi: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    Dekorasi:   "bg-pink-50 text-pink-700 border-pink-200",
-    Busana:     "bg-purple-50 text-purple-700 border-purple-200",
-    Pelamin:    "bg-rose-50 text-rose-700 border-rose-200",
-    Hiburan:    "bg-green-50 text-green-700 border-green-200",
-    "Lain-lain":"bg-slate-50 text-slate-700 border-slate-200",
+    Katering:    "bg-amber-50 text-amber-700 border-amber-200",
+    Fotografi:   "bg-sky-50 text-sky-700 border-sky-200",
+    Videografi:  "bg-indigo-50 text-indigo-700 border-indigo-200",
+    Dekorasi:    "bg-pink-50 text-pink-700 border-pink-200",
+    Busana:      "bg-purple-50 text-purple-700 border-purple-200",
+    Pelamin:     "bg-rose-50 text-rose-700 border-rose-200",
+    Hiburan:     "bg-green-50 text-green-700 border-green-200",
+    "Lain-lain": "bg-slate-50 text-slate-700 border-slate-200",
 };
 
 const STATUS_STYLES: Record<Status, { badge: string; icon: React.ElementType; label: string }> = {
@@ -54,77 +51,114 @@ const STATUS_STYLES: Record<Status, { badge: string; icon: React.ElementType; la
     Shortlisted: { badge: "bg-amber-100 text-amber-700",  icon: Star,         label: "Senarai Pendek" },
 };
 
-const INITIAL_VENDORS: Vendor[] = [
-    { id: 1, name: "Katering Mak Cik Ros",    category: "Katering",   phone: "012-3456789", estimatedPrice: 8000, depositPaid: 2000, status: "Booked",      notes: "Nasi minyak & lauk pauk" },
-    { id: 2, name: "Studio Kenangan Abadi",    category: "Fotografi",  phone: "011-9876543", estimatedPrice: 2500, depositPaid: 500,  status: "Booked",      notes: "8 jam coverage" },
-    { id: 3, name: "Pelamin Seri Indah",       category: "Pelamin",    phone: "019-1122334", estimatedPrice: 3500, depositPaid: 1000, status: "Contacted",   notes: "Tema ungu pastel" },
-    { id: 4, name: "Busana Pengantin Cahaya",  category: "Busana",     phone: "013-5544332", estimatedPrice: 1800, depositPaid: 0,    status: "Shortlisted", notes: "3 persalinan + makeup" },
-    { id: 5, name: "Deco Sentuhan Impian",     category: "Dekorasi",   phone: "016-7788990", estimatedPrice: 2200, depositPaid: 500,  status: "Contacted",   notes: "Floral arrangement" },
-];
-
-const EMPTY_FORM = { name: "", category: "Katering" as Category, phone: "", estimatedPrice: "", depositPaid: "", status: "Shortlisted" as Status, notes: "" };
+const EMPTY_FORM: {
+    name: string;
+    category: Category;
+    phone: string;
+    estimated_price: string;
+    amount_paid: string;
+    status: Status;
+    notes: string;
+    budget_category_id: string;
+} = {
+    name: "",
+    category: "Katering",
+    phone: "",
+    estimated_price: "",
+    amount_paid: "",
+    status: "Shortlisted",
+    notes: "",
+    budget_category_id: "",
+};
 
 export default function SuppliersPage() {
     const { isLoading: weddingLoading } = useWedding();
-    const [vendors, setVendors] = useState<Vendor[]>(INITIAL_VENDORS);
+    const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
+    const { data: budgetCategories = [] } = useBudgetCategories();
+
+    const addVendorMutation    = useAddVendor();
+    const updateVendorMutation = useUpdateVendor();
+    const deleteVendorMutation = useDeleteVendor();
+
     const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState<Category | "Semua">("Semua");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+    const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
     const [form, setForm] = useState(EMPTY_FORM);
     const { toast } = useToast();
 
     const filtered = useMemo(() => vendors.filter(v => {
-        const matchCat = activeCategory === "Semua" || v.category === activeCategory;
+        const matchCat    = activeCategory === "Semua" || v.category === activeCategory;
         const matchSearch = v.name.toLowerCase().includes(search.toLowerCase());
         return matchCat && matchSearch;
     }), [vendors, activeCategory, search]);
 
-    const totalEstimated = vendors.reduce((s, v) => s + v.estimatedPrice, 0);
-    const totalDeposit   = vendors.reduce((s, v) => s + v.depositPaid, 0);
-    const depositPct     = totalEstimated > 0 ? Math.round((totalDeposit / totalEstimated) * 100) : 0;
+    const totalEstimated = vendors.reduce((s, v) => s + v.estimated_price, 0);
+    const totalPaid      = vendors.reduce((s, v) => s + v.amount_paid, 0);
+    const paidPct        = totalEstimated > 0 ? Math.round((totalPaid / totalEstimated) * 100) : 0;
     const bookedCount    = vendors.filter(v => v.status === "Booked").length;
 
     const openAdd = () => {
-        setEditingVendor(null);
+        setEditingVendorId(null);
         setForm(EMPTY_FORM);
         setIsDialogOpen(true);
     };
 
     const openEdit = (v: Vendor) => {
-        setEditingVendor(v);
-        setForm({ name: v.name, category: v.category, phone: v.phone, estimatedPrice: String(v.estimatedPrice), depositPaid: String(v.depositPaid), status: v.status, notes: v.notes });
+        setEditingVendorId(v.id);
+        setForm({
+            name:               v.name,
+            category:           v.category as Category,
+            phone:              v.phone,
+            estimated_price:    String(v.estimated_price),
+            amount_paid:        String(v.amount_paid),
+            status:             v.status as Status,
+            notes:              v.notes,
+            budget_category_id: v.budget_category_id ?? "",
+        });
         setIsDialogOpen(true);
     };
 
-    const handleSave = () => {
-        if (!form.name) return;
-        const entry = {
-            name: form.name,
-            category: form.category,
-            phone: form.phone,
-            estimatedPrice: parseInt(form.estimatedPrice) || 0,
-            depositPaid: parseInt(form.depositPaid) || 0,
-            status: form.status,
-            notes: form.notes,
+    const handleSave = async () => {
+        if (!form.name.trim()) return;
+        const entry: VendorInput = {
+            name:               form.name,
+            category:           form.category,
+            phone:              form.phone,
+            estimated_price:    parseFloat(form.estimated_price) || 0,
+            amount_paid:        parseFloat(form.amount_paid) || 0,
+            status:             form.status,
+            notes:              form.notes,
+            budget_category_id: form.budget_category_id || null,
         };
-        if (editingVendor) {
-            setVendors(vendors.map(v => v.id === editingVendor.id ? { ...v, ...entry } : v));
-            toast({ title: "Dikemaskini!", description: "Maklumat pembekal dikemaskini.", variant: "success" });
-        } else {
-            const newId = Math.max(0, ...vendors.map(v => v.id)) + 1;
-            setVendors([...vendors, { id: newId, ...entry }]);
-            toast({ title: "Berjaya!", description: "Pembekal baru ditambah.", variant: "success" });
+        try {
+            if (editingVendorId) {
+                await updateVendorMutation.mutateAsync({ id: editingVendorId, ...entry });
+                toast({ title: "Dikemaskini!", description: "Maklumat pembekal dikemaskini.", variant: "success" });
+            } else {
+                await addVendorMutation.mutateAsync(entry);
+                toast({ title: "Berjaya!", description: "Pembekal baru ditambah.", variant: "success" });
+            }
+            setIsDialogOpen(false);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
+            toast({ title: "Ralat", description: msg, variant: "error" });
         }
-        setIsDialogOpen(false);
     };
 
-    const handleDelete = (id: number) => {
-        setVendors(vendors.filter(v => v.id !== id));
-        toast({ title: "Dipadam", description: "Pembekal telah dibuang.", variant: "success" });
+    const handleDelete = async (id: string) => {
+        if (!confirm("Pasti mahu buang pembekal ini?")) return;
+        try {
+            await deleteVendorMutation.mutateAsync(id);
+            toast({ title: "Dipadam", description: "Pembekal telah dibuang.", variant: "success" });
+        } catch {
+            toast({ title: "Ralat", description: "Gagal membuang pembekal.", variant: "error" });
+        }
     };
 
-    if (weddingLoading) {
+    const isSaving = addVendorMutation.isPending || updateVendorMutation.isPending;
+
+    if (weddingLoading || vendorsLoading) {
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -137,7 +171,7 @@ export default function SuppliersPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-heading font-bold text-foreground">Pembekal & Vendor</h1>
+                    <h1 className="text-3xl font-heading font-bold text-foreground">Pembekal &amp; Vendor</h1>
                     <p className="text-muted-foreground text-sm">Urus semua vendor dan pembekal perkahwinan anda.</p>
                 </div>
                 <Button onClick={openAdd} className="w-fit">
@@ -160,8 +194,8 @@ export default function SuppliersPage() {
                         <div className="space-y-3">
                             <p className="text-white/80 font-medium text-sm uppercase tracking-wider">Ringkasan Pembayaran</p>
                             <div className="flex items-baseline gap-2">
-                                <h2 className="text-4xl font-bold text-white">RM {totalDeposit.toLocaleString()}</h2>
-                                <span className="text-white/70 text-sm">deposit dibayar</span>
+                                <h2 className="text-4xl font-bold text-white">RM {totalPaid.toLocaleString()}</h2>
+                                <span className="text-white/70 text-sm">dibayar</span>
                             </div>
                             <div className="space-y-1 text-white/80 text-sm">
                                 <div className="flex items-center gap-2">
@@ -170,7 +204,7 @@ export default function SuppliersPage() {
                                 </div>
                                 <div className="flex items-center gap-2 font-bold text-white">
                                     <TrendingUp className="h-4 w-4" />
-                                    <span>Baki: RM {(totalEstimated - totalDeposit).toLocaleString()}</span>
+                                    <span>Baki: RM {(totalEstimated - totalPaid).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -184,8 +218,8 @@ export default function SuppliersPage() {
                                 <p className="text-white/70 text-xs mt-0.5">Ditempah</p>
                             </div>
                             <div className="bg-white/20 rounded-2xl px-5 py-4 text-center">
-                                <p className="text-3xl font-bold text-white">{depositPct}%</p>
-                                <p className="text-white/70 text-xs mt-0.5">Deposit</p>
+                                <p className="text-3xl font-bold text-white">{paidPct}%</p>
+                                <p className="text-white/70 text-xs mt-0.5">Dibayar</p>
                             </div>
                         </div>
                     </div>
@@ -193,14 +227,14 @@ export default function SuppliersPage() {
                     {/* Progress bar */}
                     <div className="relative z-10 mt-6">
                         <div className="flex justify-between text-white/70 text-xs mb-1.5">
-                            <span>Deposit dibayar</span>
-                            <span>{depositPct}%</span>
+                            <span>Jumlah dibayar</span>
+                            <span>{paidPct}%</span>
                         </div>
                         <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                             <motion.div
                                 className="h-full bg-white rounded-full"
                                 initial={{ width: 0 }}
-                                animate={{ width: `${depositPct}%` }}
+                                animate={{ width: `${paidPct}%` }}
                                 transition={{ duration: 1.2, ease: "easeOut" }}
                             />
                         </div>
@@ -241,12 +275,13 @@ export default function SuppliersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <AnimatePresence mode="popLayout">
                     {filtered.map((vendor, index) => {
-                        const catStyle = CATEGORY_COLORS[vendor.category];
-                        const statusStyle = STATUS_STYLES[vendor.status];
-                        const StatusIcon = statusStyle.icon;
-                        const depositPct = vendor.estimatedPrice > 0
-                            ? Math.round((vendor.depositPaid / vendor.estimatedPrice) * 100)
+                        const catStyle    = CATEGORY_COLORS[vendor.category as Category] ?? "bg-slate-50 text-slate-700 border-slate-200";
+                        const statusStyle = STATUS_STYLES[vendor.status as Status] ?? STATUS_STYLES.Shortlisted;
+                        const StatusIcon  = statusStyle.icon;
+                        const vendorPaidPct = vendor.estimated_price > 0
+                            ? Math.round((vendor.amount_paid / vendor.estimated_price) * 100)
                             : 0;
+                        const linkedBudgetCat = budgetCategories.find(c => c.id === vendor.budget_category_id);
 
                         return (
                             <motion.div
@@ -262,7 +297,7 @@ export default function SuppliersPage() {
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl border shrink-0 ${catStyle}`}>
-                                                {CATEGORY_ICONS[vendor.category]}
+                                                {CATEGORY_ICONS[vendor.category as Category] ?? "📦"}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="font-bold text-foreground truncate">{vendor.name}</p>
@@ -282,23 +317,31 @@ export default function SuppliersPage() {
                                         <div className="flex justify-between text-sm">
                                             <div className="space-y-0.5">
                                                 <p className="text-xs text-muted-foreground">Anggaran Harga</p>
-                                                <p className="font-bold text-foreground">RM {vendor.estimatedPrice.toLocaleString()}</p>
+                                                <p className="font-bold text-foreground">RM {vendor.estimated_price.toLocaleString()}</p>
                                             </div>
                                             <div className="text-right space-y-0.5">
-                                                <p className="text-xs text-muted-foreground">Deposit Dibayar</p>
-                                                <p className="font-bold text-green-600">RM {vendor.depositPaid.toLocaleString()}</p>
+                                                <p className="text-xs text-muted-foreground">Jumlah Dibayar</p>
+                                                <p className="font-bold text-green-600">RM {vendor.amount_paid.toLocaleString()}</p>
                                             </div>
                                         </div>
                                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                                             <motion.div
                                                 className="h-full bg-green-400 rounded-full"
                                                 initial={{ width: 0 }}
-                                                animate={{ width: `${depositPct}%` }}
+                                                animate={{ width: `${vendorPaidPct}%` }}
                                                 transition={{ duration: 0.8, delay: index * 0.05 }}
                                             />
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{depositPct}% deposit</p>
+                                        <p className="text-xs text-muted-foreground">{vendorPaidPct}% dibayar</p>
                                     </div>
+
+                                    {/* Budget link badge */}
+                                    {linkedBudgetCat && (
+                                        <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-2.5 py-1.5">
+                                            <Link2 className="h-3 w-3 shrink-0" />
+                                            <span>Bajet: <span className="font-semibold">{linkedBudgetCat.name}</span></span>
+                                        </div>
+                                    )}
 
                                     {/* Phone & notes */}
                                     {(vendor.phone || vendor.notes) && (
@@ -330,6 +373,7 @@ export default function SuppliersPage() {
                                             size="sm"
                                             variant="outline"
                                             onClick={() => handleDelete(vendor.id)}
+                                            disabled={deleteVendorMutation.isPending}
                                             className="border-red-200 hover:bg-red-50 text-red-500 text-xs h-8 px-3"
                                         >
                                             <Trash2 className="h-3.5 w-3.5" />
@@ -358,7 +402,7 @@ export default function SuppliersPage() {
             <Dialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
-                title={editingVendor ? "Kemaskini Pembekal" : "Tambah Pembekal Baru"}
+                title={editingVendorId ? "Kemaskini Pembekal" : "Tambah Pembekal Baru"}
             >
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
                     <div>
@@ -372,7 +416,7 @@ export default function SuppliersPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-sm font-medium text-foreground mb-1 block">Kategori</label>
+                            <label className="text-sm font-medium text-foreground mb-1 block">Kategori Vendor</label>
                             <select
                                 value={form.category}
                                 onChange={e => setForm({ ...form, category: e.target.value as Category })}
@@ -406,28 +450,55 @@ export default function SuppliersPage() {
                         <div>
                             <label className="text-sm font-medium text-foreground mb-1 block">
                                 <Wallet className="inline h-3.5 w-3.5 mr-1" />
-                                Anggaran (RM)
+                                Anggaran Harga (RM)
                             </label>
                             <Input
                                 type="number"
-                                value={form.estimatedPrice}
-                                onChange={e => setForm({ ...form, estimatedPrice: e.target.value })}
+                                value={form.estimated_price}
+                                onChange={e => setForm({ ...form, estimated_price: e.target.value })}
                                 placeholder="0"
+                                min="0"
                             />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-foreground mb-1 block">
                                 <CheckCircle2 className="inline h-3.5 w-3.5 mr-1 text-green-600" />
-                                Deposit (RM)
+                                Jumlah Dibayar (RM)
                             </label>
                             <Input
                                 type="number"
-                                value={form.depositPaid}
-                                onChange={e => setForm({ ...form, depositPaid: e.target.value })}
+                                value={form.amount_paid}
+                                onChange={e => setForm({ ...form, amount_paid: e.target.value })}
                                 placeholder="0"
+                                min="0"
                             />
                         </div>
                     </div>
+
+                    {/* Budget category link */}
+                    <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">
+                            <Link2 className="inline h-3.5 w-3.5 mr-1 text-primary" />
+                            Kaitkan ke Kategori Bajet
+                            <span className="ml-1 text-muted-foreground font-normal">(pilihan)</span>
+                        </label>
+                        <select
+                            value={form.budget_category_id}
+                            onChange={e => setForm({ ...form, budget_category_id: e.target.value })}
+                            className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                            <option value="">-- Tiada (tidak dikaitkan) --</option>
+                            {budgetCategories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                        {form.budget_category_id && (
+                            <p className="text-xs text-primary mt-1">
+                                💡 Jumlah dibayar akan reflect dalam kiraan bajet kategori ini.
+                            </p>
+                        )}
+                    </div>
+
                     <div>
                         <label className="text-sm font-medium text-foreground mb-1 block">Nota</label>
                         <Input
@@ -436,8 +507,12 @@ export default function SuppliersPage() {
                             placeholder="Sebarang nota tambahan..."
                         />
                     </div>
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                        {editingVendor ? "Kemaskini Pembekal" : "Tambah Pembekal"}
+                    <Button
+                        type="submit"
+                        disabled={isSaving}
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                        {isSaving ? "Menyimpan..." : editingVendorId ? "Kemaskini Pembekal" : "Tambah Pembekal"}
                     </Button>
                 </form>
             </Dialog>
