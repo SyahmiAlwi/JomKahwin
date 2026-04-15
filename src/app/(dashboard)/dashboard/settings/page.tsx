@@ -112,7 +112,7 @@ export default function SettingsPage() {
         if (!joinCode.trim()) return;
         setJoining(true);
         try {
-            const { error } = await supabase.rpc("join_wedding_by_code", { code: joinCode.trim() });
+            const { error } = await supabase.rpc("join_wedding_by_code", { code: joinCode.trim().toLowerCase() });
             if (error) throw error;
             toast({ title: "Berjaya menyertai!", description: "Anda kini berkongsi perkahwinan.", variant: "default" });
             setJoinCode("");
@@ -395,10 +395,10 @@ export default function SettingsPage() {
                                         <Input
                                             placeholder="Masukkan kod jemputan..."
                                             value={joinCode}
-                                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                                            onChange={(e) => setJoinCode(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && handleJoinWedding()}
                                             maxLength={8}
-                                            className="font-mono uppercase tracking-widest"
+                                            className="font-mono tracking-widest"
                                         />
                                         <Button
                                             onClick={handleJoinWedding}
