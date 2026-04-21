@@ -47,7 +47,25 @@ export type ActivityLogRow = {
   created_at: string;
 };
 
-/** Returns a human-readable relative time string in Malay. */
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
+
+/** Returns a human-readable relative time string using the caller's translator. */
+export function timeAgo(dateStr: string, t: TranslateFn): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return t("time.justNow");
+  if (mins < 60) return t("time.minutesAgo", { n: mins });
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return t("time.hoursAgo", { n: hrs });
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return t("time.daysAgo", { n: days });
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return t("time.weeksAgo", { n: weeks });
+  const months = Math.floor(days / 30);
+  return t("time.monthsAgo", { n: months });
+}
+
+/** Legacy Malay relative time, kept for backward compatibility. */
 export function timeAgoMS(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);

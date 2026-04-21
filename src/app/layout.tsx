@@ -37,6 +37,7 @@ import QueryProvider from "@/components/providers/query-provider";
 import { UserProvider } from "@/components/providers/user-provider";
 import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { LanguageProvider } from "@/lib/i18n/language-context";
 
 export default function RootLayout({
   children,
@@ -46,14 +47,16 @@ export default function RootLayout({
   return (
     <html lang="ms" suppressHydrationWarning>
       <body className={clsx(cinzel.variable, nunito.variable, "antialiased font-body bg-background text-foreground")}>
-        <QueryProvider>
-          <ToastProvider>
-            <UserProvider>
-              {children}
-              <Toaster />
-            </UserProvider>
-          </ToastProvider>
-        </QueryProvider>
+        <LanguageProvider>
+          <QueryProvider>
+            <ToastProvider>
+              <UserProvider>
+                {children}
+                <Toaster />
+              </UserProvider>
+            </ToastProvider>
+          </QueryProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

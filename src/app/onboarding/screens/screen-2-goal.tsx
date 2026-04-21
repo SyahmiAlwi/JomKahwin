@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useOnboarding, Goal } from "@/lib/contexts/onboarding-context";
 import { GOAL_OPTIONS } from "@/lib/onboarding-utils";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function Screen2Goal() {
   const { setGoal, nextScreen } = useOnboarding();
+  const t = useT();
   const [selected, setSelected] = useState<Goal | null>(null);
 
   const handleSelect = (goal: Goal) => {
@@ -39,9 +41,9 @@ export default function Screen2Goal() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Apa benda yang buat pening dalam merancang majlis?
+            {t("onb.s2.title")}
           </h1>
-          <p className="text-muted-foreground">Jujur je, kita tailor JomKahwin! untuk anda.</p>
+          <p className="text-muted-foreground">{t("onb.s2.subtitle")}</p>
         </div>
 
         {/* Options */}
@@ -64,8 +66,8 @@ export default function Screen2Goal() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl mt-0.5">{option.emoji}</span>
                   <div className="flex-1">
-                    <p className="font-semibold text-foreground">{option.label}</p>
-                    <p className="text-sm text-muted-foreground">{option.desc}</p>
+                    <p className="font-semibold text-foreground">{t(option.labelKey)}</p>
+                    <p className="text-sm text-muted-foreground">{t(option.descKey)}</p>
                   </div>
                 </div>
               </motion.button>
@@ -79,14 +81,14 @@ export default function Screen2Goal() {
         {/* Buttons */}
         <div className="flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={nextScreen}>
-            Eh, skip je
+            {t("onb.s2.skipSoft")}
           </Button>
           <Button
             className="flex-1"
             onClick={handleContinue}
             disabled={!selected}
           >
-            Seterusnya
+            {t("onb.s2.next")}
           </Button>
         </div>
       </motion.div>

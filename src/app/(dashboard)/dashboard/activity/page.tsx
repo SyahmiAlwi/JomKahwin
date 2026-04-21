@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Activity, ChevronDown } from "lucide-react";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { createClient } from "@/lib/supabase/client";
-import { type ActivityLogRow, timeAgoMS } from "@/lib/activity-log";
+import { type ActivityLogRow, timeAgo } from "@/lib/activity-log";
+import { useT } from "@/lib/i18n/language-context";
+import { TRANSLATIONS } from "@/lib/i18n/translations";
 
 const PAGE_SIZE = 20;
 
@@ -30,9 +32,41 @@ const ENTITY_COLORS: Record<string, string> = {
   timetable: "bg-sky-100 text-sky-700",
 };
 
+// Maps legacy Malay action strings (stored in existing rows) to i18n keys so
+// previously-recorded activity still renders correctly after localisation.
+const LEGACY_ACTION_MAP: Record<string, string> = {
+  "Tambah majlis": "act.event.add",
+  "Kemaskini majlis": "act.event.update",
+  "Padam majlis": "act.event.delete",
+  "Tambah tetamu": "act.guest.add",
+  "Kemaskini tetamu": "act.guest.update",
+  "Padam tetamu": "act.guest.delete",
+  "Tambah tugasan": "act.checklist.add",
+  "Padam tugasan": "act.checklist.delete",
+  "Tambah kategori bajet": "act.budget.addCat",
+  "Tambah dana tabung": "act.budget.addFund",
+};
+
+function resolveAction(raw: string, t: ReturnType<typeof useT>): string {
+  if (!raw) return "";
+  // Already a key? (e.g. "act.event.add", "event.add")
+  const maybeKey = raw.startsWith("act.") ? raw : `act.${raw}`;
+  if (TRANSLATIONS.en[maybeKey] || TRANSLATIONS.ms[maybeKey]) {
+    return t(maybeKey);
+  }
+  // Legacy Malay: checklist status changes carry a label embedded
+  if (raw.startsWith("Tukar status →")) {
+    const label = raw.replace("Tukar status →", "").trim();
+    return t("act.checklist.statusTo", { label });
+  }
+  if (LEGACY_ACTION_MAP[raw]) return t(LEGACY_ACTION_MAP[raw]);
+  return raw;
+}
+
 export default function ActivityPage() {
   const { weddingId, members, isLoading: weddingLoading } = useWedding();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const t = useT();
 
   const {
     data: activities = [],
@@ -72,8 +106,8 @@ export default function ActivityPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground">Log Aktiviti</h1>
-          <p className="text-muted-foreground text-sm">Semua perubahan yang dibuat dalam perancangan perkahwinan anda.</p>
+          <h1 className="text-3xl font-heading font-bold text-foreground">{t("activity.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("activity.subtitle")}</p>
         </div>
       </div>
 
@@ -93,7 +127,7 @@ export default function ActivityPage() {
               <Activity className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-white/70 text-sm uppercase tracking-widest font-medium">Jumlah Aktiviti</p>
+              <p className="text-white/70 text-sm uppercase tracking-widest font-medium">{t("activity.totalActivity")}</p>
               <h2 className="text-4xl font-bold text-white font-heading">{activities.length}</h2>
             </div>
           </div>
@@ -112,19 +146,20 @@ export default function ActivityPage() {
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Activity className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="text-xl font-heading font-bold text-foreground mb-2">Tiada Aktiviti Lagi</h3>
+          <h3 className="text-xl font-heading font-bold text-foreground mb-2">{t("activity.emptyTitle")}</h3>
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-            Setiap kali anda menambah atau mengemaskini data, ia akan direkodkan di sini.
+            {t("activity.emptyBody")}
           </p>
         </Card>
       ) : (
         <div className="space-y-3">
           {visible.map((activity, index) => {
             const member = getMember(activity.user_id);
-            const name = member?.full_name ?? "Pengguna";
+            const name = member?.full_name ?? t("common.user");
             const initial = name.charAt(0).toUpperCase();
             const entityIcon = ENTITY_ICONS[activity.entity_type] ?? "📋";
             const entityColor = ENTITY_COLORS[activity.entity_type] ?? "bg-muted text-muted-foreground";
+            const actionLabel = resolveAction(activity.action, t);
 
             return (
               <motion.div
@@ -151,14 +186,14 @@ export default function ActivityPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-0.5">
                       <span className="font-semibold text-foreground text-sm truncate">{name}</span>
-                      <span className="text-muted-foreground text-sm">{activity.action}</span>
+                      <span className="text-muted-foreground text-sm">{actionLabel}</span>
                       {activity.entity_name && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${entityColor}`}>
                           {entityIcon} {activity.entity_name}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{timeAgoMS(activity.created_at)}</p>
+                    <p className="text-xs text-muted-foreground">{timeAgo(activity.created_at, t)}</p>
                   </div>
                 </Card>
               </motion.div>
@@ -173,7 +208,7 @@ export default function ActivityPage() {
                 className="border-border/50 hover:border-primary/30 hover:bg-primary/5 gap-2"
               >
                 <ChevronDown className="h-4 w-4" />
-                Muat Lebih Banyak ({activities.length - visibleCount} lagi)
+                {t("activity.loadMore", { count: activities.length - visibleCount })}
               </Button>
             </div>
           )}

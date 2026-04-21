@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/custom-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Clock, User, FileText, Trash2, Edit3, CalendarDays, ChevronDown } from "lucide-react";
 import { useWedding } from "@/components/providers/wedding-provider";
+import { useT } from "@/lib/i18n/language-context";
 
 type Category = "Solemnization" | "Resepsi" | "Doa" | "Makan" | "Hiburan" | "Lain-lain";
 
@@ -45,6 +46,7 @@ const EMPTY_FORM = { time: "", activity: "", pic: "", notes: "", category: "Rese
 
 export default function TimetablePage() {
     const { isLoading: weddingLoading } = useWedding();
+    const t = useT();
     const [slots, setSlots] = useState<Slot[]>(initialSlots);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
@@ -70,23 +72,23 @@ export default function TimetablePage() {
         if (!form.time || !form.activity) return;
         if (editingSlot) {
             setSlots(slots.map(s => s.id === editingSlot.id ? { ...s, ...form } : s));
-            toast({ title: "Dikemaskini!", description: "Slot jadual telah dikemaskini.", variant: "success" });
+            toast({ title: t("common.updated"), description: t("timetable.slotUpdated"), variant: "success" });
         } else {
             const newId = Math.max(0, ...slots.map(s => s.id)) + 1;
             setSlots([...slots, { id: newId, ...form }]);
-            toast({ title: "Berjaya!", description: "Slot baru ditambah ke jadual.", variant: "success" });
+            toast({ title: t("common.success"), description: t("timetable.slotAdded"), variant: "success" });
         }
         setIsDialogOpen(false);
     };
 
     const handleDelete = (id: number) => {
         setSlots(slots.filter(s => s.id !== id));
-        toast({ title: "Dipadam", description: "Slot telah dibuang daripada jadual.", variant: "success" });
+        toast({ title: t("timetable.slotDeleted"), description: t("timetable.slotDeletedBody"), variant: "success" });
     };
 
-    const formatTime12 = (t: string) => {
-        const [h, m] = t.split(":").map(Number);
-        const ampm = h >= 12 ? "PTG" : "PGI";
+    const formatTime12 = (time: string) => {
+        const [h, m] = time.split(":").map(Number);
+        const ampm = h >= 12 ? t("timetable.pm") : t("timetable.am");
         const h12 = h % 12 || 12;
         return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
     };
@@ -104,12 +106,12 @@ export default function TimetablePage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-heading font-bold text-foreground">Jadual Hari H</h1>
-                    <p className="text-muted-foreground text-sm">Urus aturcara dan rundown majlis anda.</p>
+                    <h1 className="text-3xl font-heading font-bold text-foreground">{t("timetable.title")}</h1>
+                    <p className="text-muted-foreground text-sm">{t("timetable.subtitle")}</p>
                 </div>
                 <Button onClick={openAdd} className="w-fit">
                     <Plus className="h-4 w-4 mr-2" />
-                    Tambah Slot
+                    {t("timetable.addSlot")}
                 </Button>
             </div>
 
@@ -126,7 +128,7 @@ export default function TimetablePage() {
                                 <CalendarDays className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-white/80 text-xs uppercase tracking-wider">Jumlah Slot</p>
+                                <p className="text-white/80 text-xs uppercase tracking-wider">{t("timetable.totalSlots")}</p>
                                 <p className="text-white font-bold text-xl">{slots.length}</p>
                             </div>
                         </div>
@@ -134,10 +136,9 @@ export default function TimetablePage() {
                             {CATEGORIES.map(cat => {
                                 const count = slots.filter(s => s.category === cat).length;
                                 if (count === 0) return null;
-                                const style = CATEGORY_STYLES[cat];
                                 return (
                                     <span key={cat} className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
-                                        {cat} ({count})
+                                        {t(`timeCat.${cat}`)} ({count})
                                     </span>
                                 );
                             })}
@@ -185,7 +186,7 @@ export default function TimetablePage() {
                                                         <p className="font-bold text-foreground truncate">{slot.activity}</p>
                                                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.badge}`}>
-                                                                {slot.category}
+                                                                {t(`timeCat.${slot.category}`)}
                                                             </span>
                                                             {slot.pic && (
                                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -223,7 +224,7 @@ export default function TimetablePage() {
                                                                     className="border-border/50 hover:bg-primary/5 hover:border-primary/30 text-xs h-8"
                                                                 >
                                                                     <Edit3 className="h-3.5 w-3.5 mr-1" />
-                                                                    Edit
+                                                                    {t("common.edit")}
                                                                 </Button>
                                                                 <Button
                                                                     size="sm"
@@ -232,7 +233,7 @@ export default function TimetablePage() {
                                                                     className="border-red-200 hover:bg-red-50 text-red-500 text-xs h-8"
                                                                 >
                                                                     <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                                    Padam
+                                                                    {t("common.delete")}
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -249,8 +250,8 @@ export default function TimetablePage() {
                     {slots.length === 0 && (
                         <Card className="p-10 text-center border-border/50">
                             <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                            <p className="font-medium text-foreground">Tiada slot lagi</p>
-                            <p className="text-sm text-muted-foreground mt-1">Tekan "Tambah Slot" untuk mulakan jadual hari H anda.</p>
+                            <p className="font-medium text-foreground">{t("timetable.empty")}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{t("timetable.emptyBody")}</p>
                         </Card>
                     )}
                 </div>
@@ -260,12 +261,12 @@ export default function TimetablePage() {
             <Dialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
-                title={editingSlot ? "Kemaskini Slot" : "Tambah Slot Baru"}
+                title={editingSlot ? t("timetable.editSlot") : t("timetable.addTitle")}
             >
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-1">
-                            <label className="text-sm font-medium text-foreground mb-1 block">Masa</label>
+                            <label className="text-sm font-medium text-foreground mb-1 block">{t("timetable.time")}</label>
                             <Input
                                 type="time"
                                 value={form.time}
@@ -274,43 +275,43 @@ export default function TimetablePage() {
                             />
                         </div>
                         <div className="col-span-1">
-                            <label className="text-sm font-medium text-foreground mb-1 block">Kategori</label>
+                            <label className="text-sm font-medium text-foreground mb-1 block">{t("timetable.category")}</label>
                             <select
                                 value={form.category}
                                 onChange={e => setForm({ ...form, category: e.target.value as Category })}
                                 className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             >
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                {CATEGORIES.map(c => <option key={c} value={c}>{t(`timeCat.${c}`)}</option>)}
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Nama Aktiviti</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("timetable.activity")}</label>
                         <Input
                             value={form.activity}
                             onChange={e => setForm({ ...form, activity: e.target.value })}
-                            placeholder="Contoh: Akad Nikah"
+                            placeholder={t("timetable.activityPlaceholder")}
                             required
                         />
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">PIC (Orang Bertanggungjawab)</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("timetable.pic")}</label>
                         <Input
                             value={form.pic}
                             onChange={e => setForm({ ...form, pic: e.target.value })}
-                            placeholder="Contoh: Abang Long, Tok Kadi"
+                            placeholder={t("timetable.picPlaceholder")}
                         />
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Nota</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("timetable.notes")}</label>
                         <Input
                             value={form.notes}
                             onChange={e => setForm({ ...form, notes: e.target.value })}
-                            placeholder="Sebarang nota tambahan..."
+                            placeholder={t("timetable.notesPlaceholder")}
                         />
                     </div>
                     <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                        {editingSlot ? "Kemaskini Slot" : "Tambah Slot"}
+                        {editingSlot ? t("timetable.editSlot") : t("timetable.addSlot")}
                     </Button>
                 </form>
             </Dialog>

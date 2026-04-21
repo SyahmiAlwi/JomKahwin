@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
 import { Bell } from "lucide-react";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function Screen7Permissions() {
   const { nextScreen } = useOnboarding();
+  const t = useT();
 
   // For now, we'll show a notification permission screen
   // In production, you'd detect actual permissions from the manifest
@@ -51,20 +53,19 @@ export default function Screen7Permissions() {
         {/* Headline */}
         <div className="space-y-2 text-center">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Stay on track dengan reminder
+            {t("onb.s7.title")}
           </h1>
           <p className="text-muted-foreground">
-            Jangan lupa deadlines & event days
+            {t("onb.s7.subtitle")}
           </p>
         </div>
 
-        {/* Benefits */}
         <div className="space-y-3">
           {[
-            "Remind vendor meetings, fittings, tastings",
-            "Countdown to your event",
-            "Guest RSVP deadlines",
-            "Checklist reminders",
+            t("onb.s7.benefit.1"),
+            t("onb.s7.benefit.2"),
+            t("onb.s7.benefit.3"),
+            t("onb.s7.benefit.4"),
           ].map((benefit, idx) => (
             <motion.div
               key={idx}
@@ -85,10 +86,10 @@ export default function Screen7Permissions() {
         {/* Buttons */}
         <div className="flex flex-col gap-2">
           <Button size="lg" className="w-full" onClick={handleAllow}>
-            Okay, Benarkan
+            {t("onb.s7.allow")}
           </Button>
           <Button variant="ghost" className="w-full" onClick={handleSkip}>
-            Skip je
+            {t("onb.s7.skip")}
           </Button>
         </div>
       </motion.div>

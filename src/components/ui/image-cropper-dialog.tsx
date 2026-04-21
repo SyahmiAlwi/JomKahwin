@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/lib/i18n/language-context";
 
 interface ImageCropperDialogProps {
     open: boolean;
@@ -27,6 +28,7 @@ export function ImageCropperDialog({
     imageSrc,
     onCropComplete,
 }: ImageCropperDialogProps) {
+    const t = useT();
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -113,9 +115,9 @@ export function ImageCropperDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Sunting Foto</DialogTitle>
+                    <DialogTitle>{t("cropper.title")}</DialogTitle>
                     <DialogDescription>
-                        Laraskan foto anda untuk paparan terbaik.
+                        {t("cropper.description")}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="relative w-full h-80 bg-black/5 rounded-md overflow-hidden mt-4">
@@ -134,7 +136,7 @@ export function ImageCropperDialog({
                 <div className="py-4 space-y-4">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="zoom">Zoom</Label>
+                            <Label htmlFor="zoom">{t("cropper.zoom")}</Label>
                             <span className="text-sm text-muted-foreground">{zoom.toFixed(1)}x</span>
                         </div>
                         <Slider
@@ -153,10 +155,10 @@ export function ImageCropperDialog({
                         onClick={() => onOpenChange(false)}
                         disabled={isProcessing}
                     >
-                        Batal
+                        {t("common.cancel")}
                     </Button>
                     <Button onClick={handleSave} disabled={isProcessing}>
-                        {isProcessing ? "Menyimpan..." : "Simpan"}
+                        {isProcessing ? t("common.saving") : t("common.save")}
                     </Button>
                 </DialogFooter>
             </DialogContent>

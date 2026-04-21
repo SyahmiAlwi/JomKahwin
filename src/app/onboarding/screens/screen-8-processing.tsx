@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function Screen8Processing() {
   const { nextScreen } = useOnboarding();
+  const t = useT();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,10 +44,10 @@ export default function Screen8Processing() {
           className="text-center space-y-2"
         >
           <h1 className="text-3xl font-heading font-bold text-foreground">
-            Menyediakan rancangan majlis anda...
+            {t("onb.s8.title")}
           </h1>
           <p className="text-muted-foreground">
-            Chill jap, kami organize semuanya untuk anda
+            {t("onb.s8.subtitle")}
           </p>
         </motion.div>
       </div>

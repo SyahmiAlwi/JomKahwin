@@ -5,6 +5,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
+import { useT } from "@/lib/i18n/language-context";
 
 interface UserContextType {
     user: User | null;
@@ -22,6 +23,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     const router = useRouter();
     const { toast } = useToast();
+    const t = useT();
 
     const fetchUser = async () => {
         try {
@@ -116,15 +118,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             }
 
             toast({
-                title: "Foto dikemaskini!",
-                description: "Foto profil anda telah berjaya dimuat naik.",
+                title: t("photo.updated"),
+                description: t("photo.updatedBody"),
                 variant: 'default'
             });
 
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Sila cuba lagi nanti.";
+            const message = error instanceof Error ? error.message : t("common.tryAgainLater");
             toast({
-                title: "Gagal memuat naik",
+                title: t("photo.uploadFail"),
                 description: message,
                 variant: "error"
             });

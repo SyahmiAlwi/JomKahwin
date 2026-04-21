@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { CHECKLIST_TEMPLATE } from "@/lib/data/checklist-template";
+import { CHECKLIST_TEMPLATE_EN } from "@/lib/data/checklist-template-en";
+import type { LangCode } from "@/lib/i18n/translations";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -184,13 +186,14 @@ export function useSeedChecklist() {
   const queryClient = useQueryClient();
   const { weddingId } = useWedding();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (lang: LangCode = "ms") => {
       if (!weddingId) throw new Error("Wedding not loaded");
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const rows = CHECKLIST_TEMPLATE.map((item) => ({
+      const template = lang === "en" ? CHECKLIST_TEMPLATE_EN : CHECKLIST_TEMPLATE;
+      const rows = template.map((item) => ({
         user_id: user.id,
         wedding_id: weddingId,
         title: item.title,

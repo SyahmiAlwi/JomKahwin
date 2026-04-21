@@ -17,13 +17,14 @@ import {
   useUpdateEvent,
   useDeleteEvent,
   calcDaysLeft,
-  formatDateMY,
+  formatDate,
   type DbEvent,
 } from "@/lib/supabase/queries/events";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { useUser } from "@/components/providers/user-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 const EVENT_TYPES = ["Nikah", "Tunang", "Resepsi"] as const;
 
@@ -32,18 +33,18 @@ const EMPTY_FORM: EventForm = { name: "", date: "", type: EVENT_TYPES[0] };
 
 // ── Status chip helper ────────────────────────────────────────
 
-function DaysChip({ days }: { days: number }) {
+function DaysChip({ days, t }: { days: number; t: (k: string, v?: Record<string, string | number>) => string }) {
   if (days < 0) {
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-        Sudah berlalu
+        {t("majlis.passed")}
       </span>
     );
   }
   if (days === 0) {
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold animate-pulse">
-        Hari Ini! 🎉
+        {t("majlis.today")}
       </span>
     );
   }
@@ -55,7 +56,7 @@ function DaysChip({ days }: { days: number }) {
       : "bg-green-50 text-green-700";
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>
-      {days} hari lagi
+      {t("majlis.daysLeft", { days })}
     </span>
   );
 }
@@ -66,6 +67,7 @@ export default function MajlisPage() {
   const { toast } = useToast();
   const { weddingId, isLoading: weddingLoading } = useWedding();
   const { user } = useUser();
+  const { lang, t } = useLanguage();
   const { data: events = [], isLoading } = useEvents();
   const addEvent = useAddEvent();
   const updateEvent = useUpdateEvent();
@@ -93,29 +95,29 @@ export default function MajlisPage() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.date) {
-      toast({ title: "Sila isi nama dan tarikh majlis.", variant: "error" });
+      toast({ title: t("majlis.fillNameDate"), variant: "error" });
       return;
     }
     try {
       if (dialog === "add") {
         const newEv = await addEvent.mutateAsync({ name: form.name.trim(), date: form.date, type: form.type });
-        toast({ title: "Majlis berjaya ditambah!", variant: "success" });
+        toast({ title: t("majlis.addedToast"), variant: "success" });
         if (weddingId && user) {
           const supabase = createClient();
-          await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah majlis", entityType: "event", entityName: newEv.name });
+          await logActivity({ supabase, weddingId, userId: user.id, action: "event.add", entityType: "event", entityName: newEv.name });
         }
       } else if (dialog && typeof dialog === "object") {
         await updateEvent.mutateAsync({ id: dialog.id, name: form.name.trim(), date: form.date, type: form.type });
-        toast({ title: "Majlis berjaya dikemaskini!", variant: "success" });
+        toast({ title: t("majlis.updatedToast"), variant: "success" });
         if (weddingId && user) {
           const supabase = createClient();
-          await logActivity({ supabase, weddingId, userId: user.id, action: "Kemaskini majlis", entityType: "event", entityName: form.name.trim() });
+          await logActivity({ supabase, weddingId, userId: user.id, action: "event.update", entityType: "event", entityName: form.name.trim() });
         }
       }
       closeDialog();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-      toast({ title: "Ralat", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.tryAgain");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -123,21 +125,21 @@ export default function MajlisPage() {
     const eventToDelete = events.find(e => e.id === id);
     try {
       await deleteEvent.mutateAsync(id);
-      toast({ title: "Majlis dipadam.", variant: "default" });
+      toast({ title: t("majlis.deletedToast"), variant: "default" });
       setDeleteConfirm(null);
       if (weddingId && user) {
         const supabase = createClient();
-        await logActivity({ supabase, weddingId, userId: user.id, action: "Padam majlis", entityType: "event", entityName: eventToDelete?.name });
+        await logActivity({ supabase, weddingId, userId: user.id, action: "event.delete", entityType: "event", entityName: eventToDelete?.name });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-      toast({ title: "Ralat", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.tryAgain");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
   const isMutating = addEvent.isPending || updateEvent.isPending;
   const isEditMode = dialog !== null && dialog !== "add";
-  const dialogTitle = isEditMode ? "Kemaskini Majlis" : "Tambah Majlis Baru";
+  const dialogTitle = isEditMode ? t("majlis.dialogEditTitle") : t("majlis.dialogAddTitle");
 
   // Nearest upcoming event for summary card
   const upcomingEvents = events
@@ -158,15 +160,15 @@ export default function MajlisPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground">Urus Majlis</h1>
-          <p className="text-muted-foreground text-sm">Tambah dan urus semua majlis perkahwinan anda.</p>
+          <h1 className="text-3xl font-heading font-bold text-foreground">{t("majlis.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("majlis.subtitle")}</p>
         </div>
         <Button
           onClick={openAdd}
           className="rounded-full px-6 w-fit"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Tambah Majlis
+          {t("majlis.addButton")}
         </Button>
       </div>
 
@@ -184,26 +186,26 @@ export default function MajlisPage() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <p className="text-white/70 text-sm font-medium uppercase tracking-widest mb-1">
-                Majlis Anda
+                {t("majlis.yourCount")}
               </p>
               <h2 className="text-5xl font-bold tracking-tight font-heading">
                 {events.length}
                 <span className="text-xl opacity-60 font-normal ml-2">
-                  {events.length === 1 ? "majlis" : "majlis"}
+                  {events.length === 1 ? t("majlis.oneEvent") : t("majlis.manyEvents")}
                 </span>
               </h2>
             </div>
             {nextEvent && (
               <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
-                <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Majlis Terdekat</p>
+                <p className="text-white/70 text-xs uppercase tracking-wider mb-1">{t("majlis.nearest")}</p>
                 <p className="font-heading font-bold text-white text-lg leading-tight">{nextEvent.name}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <CalendarDays className="h-3.5 w-3.5 text-white/60" />
-                  <p className="text-white/80 text-sm">{formatDateMY(nextEvent.date!)}</p>
+                  <p className="text-white/80 text-sm">{formatDate(nextEvent.date!, lang)}</p>
                   <span className="text-white/40">·</span>
                   <Clock className="h-3.5 w-3.5 text-white/60" />
                   <p className="text-white/80 text-sm font-semibold">
-                    {calcDaysLeft(nextEvent.date!)} hari lagi
+                    {t("majlis.daysLeft", { days: calcDaysLeft(nextEvent.date!) })}
                   </p>
                 </div>
               </div>
@@ -232,10 +234,10 @@ export default function MajlisPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-heading font-bold text-foreground">
-                Tiada Majlis Lagi
+                {t("majlis.emptyTitle")}
               </h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
-                Tambah majlis pertama anda — nikah, tunang, atau resepsi — dan mula merancang!
+                {t("majlis.emptySubtitle")}
               </p>
             </div>
             <Button
@@ -243,7 +245,7 @@ export default function MajlisPage() {
               className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Tambah Majlis Pertama
+              {t("majlis.addFirst")}
             </Button>
           </Card>
         </motion.div>
@@ -274,7 +276,7 @@ export default function MajlisPage() {
                         </h3>
                         {event.type && (
                           <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
-                            {event.type}
+                            {t(`eventType.${event.type}`)}
                           </span>
                         )}
                       </div>
@@ -283,12 +285,12 @@ export default function MajlisPage() {
                           <>
                             <span className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5" />
-                              {formatDateMY(event.date)}
+                              {formatDate(event.date, lang)}
                             </span>
-                            {days !== null && <DaysChip days={days} />}
+                            {days !== null && <DaysChip days={days} t={t} />}
                           </>
                         ) : (
-                          <span className="italic">Tarikh belum ditetapkan</span>
+                          <span className="italic">{t("majlis.dateNotSet")}</span>
                         )}
                       </div>
                     </div>
@@ -328,10 +330,10 @@ export default function MajlisPage() {
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="majlis-name">Nama Majlis</Label>
+            <Label htmlFor="majlis-name">{t("majlis.nameLabel")}</Label>
             <Input
               id="majlis-name"
-              placeholder="cth. Majlis Nikah"
+              placeholder={t("majlis.namePlaceholder")}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               autoFocus
@@ -339,7 +341,7 @@ export default function MajlisPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="majlis-date">Tarikh</Label>
+            <Label htmlFor="majlis-date">{t("majlis.dateLabel")}</Label>
             <Input
               id="majlis-date"
               type="date"
@@ -349,7 +351,7 @@ export default function MajlisPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Jenis Majlis</Label>
+            <Label>{t("majlis.typeLabel")}</Label>
             <div className="flex gap-2">
               {EVENT_TYPES.map((type) => (
                 <button
@@ -362,7 +364,7 @@ export default function MajlisPage() {
                       : "bg-background text-foreground border-input hover:border-primary/40"
                   }`}
                 >
-                  {type}
+                  {t(`eventType.${type}`)}
                 </button>
               ))}
             </div>
@@ -374,10 +376,10 @@ export default function MajlisPage() {
               disabled={isMutating}
               className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {isMutating ? "Menyimpan…" : isEditMode ? "Simpan Perubahan" : "Tambah Majlis"}
+              {isMutating ? t("common.saving") : isEditMode ? t("common.saveChanges") : t("majlis.saveAdd")}
             </Button>
             <Button onClick={closeDialog} variant="outline" className="flex-1">
-              Batal
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
@@ -387,11 +389,11 @@ export default function MajlisPage() {
       <Dialog
         isOpen={deleteConfirm !== null}
         onClose={() => setDeleteConfirm(null)}
-        title="Padam Majlis?"
+        title={t("majlis.dialogDeleteTitle")}
       >
         <div className="space-y-4">
           <p className="text-muted-foreground text-sm">
-            Majlis ini akan dipadam secara kekal. Tindakan ini tidak boleh dibatalkan.
+            {t("majlis.dialogDeleteBody")}
           </p>
           <div className="flex gap-2">
             <Button
@@ -399,14 +401,14 @@ export default function MajlisPage() {
               disabled={deleteEvent.isPending}
               className="flex-1 bg-red-600 hover:bg-red-700 text-white border-0"
             >
-              {deleteEvent.isPending ? "Memadam…" : "Ya, Padam"}
+              {deleteEvent.isPending ? t("common.deleting") : t("majlis.yesDelete")}
             </Button>
             <Button
               onClick={() => setDeleteConfirm(null)}
               variant="outline"
               className="flex-1"
             >
-              Batal
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

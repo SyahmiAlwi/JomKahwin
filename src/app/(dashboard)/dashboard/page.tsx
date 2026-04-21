@@ -23,11 +23,12 @@ import {
     useEvents,
     useAddEvent,
     calcDaysLeft,
-    formatDateMY,
+    formatDate,
 } from "@/lib/supabase/queries/events";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 type TimeLeft = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -49,6 +50,8 @@ export default function DashboardPage() {
     const { toast } = useToast();
     const { user } = useUser();
     const { weddingId, isLoading: weddingLoading } = useWedding();
+    const { lang, t } = useLanguage();
+    const numLocale = lang === "en" ? "en-GB" : "ms-MY";
 
     const { data: events = [], isLoading: eventsLoading } = useEvents();
     const { data: guests = [] } = useGuests();
@@ -87,7 +90,7 @@ export default function DashboardPage() {
 
     const handleAddEvent = async () => {
         if (!newName.trim() || !newDate) {
-            toast({ title: "Sila isi semua maklumat majlis.", variant: "error" });
+            toast({ title: t("home.fillAllInfo"), variant: "error" });
             return;
         }
         try {
@@ -96,26 +99,26 @@ export default function DashboardPage() {
                 date: newDate,
                 type: newType,
             });
-            toast({ title: "Majlis berjaya ditambah!", variant: "default" });
+            toast({ title: t("home.eventAdded"), variant: "default" });
             setDialogOpen(false);
             setNewName(""); setNewDate(""); setNewType(EVENT_TYPES[0]);
             if (weddingId && user) {
                 const supabase = createClient();
                 await logActivity({
                     supabase, weddingId, userId: user.id,
-                    action: "Tambah majlis", entityType: "event", entityName: newEvent.name,
+                    action: "event.add", entityType: "event", entityName: newEvent.name,
                 });
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Gagal menambah majlis", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("home.failAddEvent"), description: msg, variant: "error" });
         }
     };
 
     const displayName =
         user?.user_metadata?.full_name ??
         user?.email?.split("@")[0] ??
-        "Pengguna";
+        t("common.user");
 
     if (weddingLoading) {
         return (
@@ -146,13 +149,13 @@ export default function DashboardPage() {
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
                             <p className="text-white/50 text-xs uppercase tracking-widest font-medium mb-1">
-                                Selamat Datang
+                                {t("home.welcome")}
                             </p>
                             <h1 className="text-2xl md:text-3xl font-heading font-bold text-white">
-                                Hai, {displayName}!
+                                {t("home.greeting", { name: displayName })}
                             </h1>
                             <p className="text-white/50 text-sm mt-1.5">
-                                Semoga perancangan anda hari ini berjalan lancar.
+                                {t("home.subGreeting")}
                             </p>
                         </div>
                         <div className="hidden md:flex h-14 w-14 rounded-full bg-white/10 border border-white/20 items-center justify-center shrink-0">
@@ -167,19 +170,19 @@ export default function DashboardPage() {
                 {[
                     {
                         icon: Wallet,
-                        label: "Bajet",
-                        value: totalBudget > 0 ? `RM ${totalBudget.toLocaleString("ms-MY", { maximumFractionDigits: 0 })}` : "–",
+                        label: t("home.stat.budget"),
+                        value: totalBudget > 0 ? `RM ${totalBudget.toLocaleString(numLocale, { maximumFractionDigits: 0 })}` : "–",
                         color: "bg-rose-50 text-rose-500",
                     },
                     {
                         icon: CheckSquare,
-                        label: "Tugasan",
+                        label: t("home.stat.tasks"),
                         value: totalTasks > 0 ? `${completedTasks}/${totalTasks}` : "–",
                         color: "bg-amber-50 text-amber-500",
                     },
                     {
                         icon: Users,
-                        label: "Jemputan",
+                        label: t("home.stat.invites"),
                         value: totalGuests > 0 ? String(totalGuests) : "–",
                         color: "bg-sky-50 text-sky-500",
                     },
@@ -214,13 +217,13 @@ export default function DashboardPage() {
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-6">
                                 <div className="md:min-w-[200px]">
                                     <p className="text-white/60 text-xs uppercase tracking-widest font-medium mb-1">
-                                        Kiraan Detik
+                                        {t("home.countdownLabel")}
                                     </p>
                                     <h2 className="text-xl md:text-2xl font-heading font-bold text-white leading-tight">
                                         {nextEvent.name}
                                     </h2>
                                     {nextEvent.date && (
-                                        <p className="text-white/60 text-sm mt-1">{formatDateMY(nextEvent.date)}</p>
+                                        <p className="text-white/60 text-sm mt-1">{formatDate(nextEvent.date, lang)}</p>
                                     )}
                                 </div>
 
@@ -229,10 +232,10 @@ export default function DashboardPage() {
                                 <div className="flex items-end gap-2 md:gap-4">
                                     {(
                                         [
-                                            { value: timeLeft.days, label: "Hari" },
-                                            { value: timeLeft.hours, label: "Jam" },
-                                            { value: timeLeft.minutes, label: "Minit" },
-                                            { value: timeLeft.seconds, label: "Saat" },
+                                            { value: timeLeft.days, label: t("home.time.days") },
+                                            { value: timeLeft.hours, label: t("home.time.hours") },
+                                            { value: timeLeft.minutes, label: t("home.time.minutes") },
+                                            { value: timeLeft.seconds, label: t("home.time.seconds") },
                                         ] as const
                                     ).map(({ value, label }, i) => (
                                         <div key={label} className="flex items-end gap-2 md:gap-4">
@@ -260,9 +263,9 @@ export default function DashboardPage() {
                                 <span className="text-2xl">💍</span>
                             </div>
                             <div>
-                                <p className="font-heading font-semibold text-foreground">Tiada majlis akan datang</p>
+                                <p className="font-heading font-semibold text-foreground">{t("home.noUpcoming")}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    Tambah tarikh perkahwinan anda di bawah.
+                                    {t("home.addDatePrompt")}
                                 </p>
                             </div>
                         </Card>
@@ -273,7 +276,7 @@ export default function DashboardPage() {
             {/* ── Events Grid ──────────────────────────────────── */}
             <section>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-heading font-bold text-foreground">Majlis Anda</h2>
+                    <h2 className="text-xl font-heading font-bold text-foreground">{t("home.yourEvents")}</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -284,7 +287,7 @@ export default function DashboardPage() {
                     ) : (
                         events.map((event, index) => {
                             const daysLeft = event.date ? calcDaysLeft(event.date) : null;
-                            const dateLabel = event.date ? formatDateMY(event.date) : "–";
+                            const dateLabel = event.date ? formatDate(event.date, lang) : "–";
                             return (
                                 <motion.div
                                     key={event.id}
@@ -302,7 +305,7 @@ export default function DashboardPage() {
                                             </h3>
                                             {event.type && (
                                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0 ml-2">
-                                                    {event.type}
+                                                    {t(`eventType.${event.type}`)}
                                                 </span>
                                             )}
                                         </div>
@@ -314,11 +317,11 @@ export default function DashboardPage() {
                                                         {daysLeft >= 0 ? daysLeft : 0}
                                                     </span>
                                                     <span className="text-xs text-muted-foreground font-medium">
-                                                        {daysLeft >= 0 ? "hari lagi" : "sudah berlalu"}
+                                                        {daysLeft >= 0 ? t("home.daysLeft") : t("home.daysPassed")}
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-muted-foreground">Tarikh belum ditetapkan</p>
+                                                <p className="text-sm text-muted-foreground">{t("home.dateNotSet")}</p>
                                             )}
                                             <p className="text-xs text-muted-foreground mt-1">{dateLabel}</p>
                                         </div>
@@ -342,7 +345,7 @@ export default function DashboardPage() {
                                 <Plus className="h-6 w-6 text-primary/60 group-hover:text-primary" />
                             </div>
                             <p className="mt-3 font-medium text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                                Tambah Majlis Baru
+                                {t("home.addNewEvent")}
                             </p>
                         </Card>
                     </motion.div>
@@ -353,21 +356,21 @@ export default function DashboardPage() {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="font-heading text-xl">Tambah Majlis Baru</DialogTitle>
+                        <DialogTitle className="font-heading text-xl">{t("home.addEventDialog.title")}</DialogTitle>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
                         <div className="space-y-1.5">
-                            <Label htmlFor="event-name">Nama Majlis</Label>
+                            <Label htmlFor="event-name">{t("home.addEventDialog.nameLabel")}</Label>
                             <Input
                                 id="event-name"
-                                placeholder="cth. Majlis Nikah"
+                                placeholder={t("home.addEventDialog.namePlaceholder")}
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="event-date">Tarikh</Label>
+                            <Label htmlFor="event-date">{t("home.addEventDialog.dateLabel")}</Label>
                             <Input
                                 id="event-date"
                                 type="date"
@@ -376,7 +379,7 @@ export default function DashboardPage() {
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label>Jenis Majlis</Label>
+                            <Label>{t("home.addEventDialog.typeLabel")}</Label>
                             <div className="flex gap-2">
                                 {EVENT_TYPES.map((type) => (
                                     <button
@@ -389,7 +392,7 @@ export default function DashboardPage() {
                                                 : "bg-white text-foreground border-border hover:border-primary/40"
                                         }`}
                                     >
-                                        {type}
+                                        {t(`eventType.${type}`)}
                                     </button>
                                 ))}
                             </div>
@@ -402,13 +405,13 @@ export default function DashboardPage() {
                             onClick={() => setDialogOpen(false)}
                             disabled={addEvent.isPending}
                         >
-                            Batal
+                            {t("common.cancel")}
                         </Button>
                         <Button
                             onClick={handleAddEvent}
                             disabled={addEvent.isPending}
                         >
-                            {addEvent.isPending ? "Menyimpan…" : "Simpan Majlis"}
+                            {addEvent.isPending ? t("common.saving") : t("home.addEventDialog.save")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -30,15 +30,16 @@ import {
   type ChecklistStatus,
   type ChecklistTask,
 } from "@/lib/supabase/queries/checklist";
-import { CHECKLIST_TEMPLATE } from "@/lib/data/checklist-template";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { useUser } from "@/components/providers/user-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useLanguage, useT } from "@/lib/i18n/language-context";
 
 // ── Constants & Helpers ───────────────────────────────────────
 
+// Canonical phase identifiers (kept in Malay for data consistency); translated via `phase.*` keys.
 export const PHASES = [
   "12 - 6 bulan sebelum",
   "5 bulan sebelum",
@@ -60,25 +61,29 @@ function nextStatus(current: ChecklistStatus): ChecklistStatus {
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
 }
 
+type TFn = ReturnType<typeof useT>;
+
 /** Derive display name for a member UUID from the members list. */
 function memberName(
   uid: string,
   members: { user_id: string; full_name: string | null }[],
-  currentUserId?: string
+  currentUserId: string | undefined,
+  t: TFn,
 ): string {
   const m = members.find((x) => x.user_id === uid);
-  if (!m) return "Ahli";
+  if (!m) return t("common.member");
   if (m.full_name) return m.full_name;
-  if (uid === currentUserId) return "Anda";
-  return "Ahli";
+  if (uid === currentUserId) return t("common.you");
+  return t("common.member");
 }
 
 function memberInitials(
   uid: string,
   members: { user_id: string; full_name: string | null }[],
-  currentUserId?: string
+  currentUserId: string | undefined,
+  t: TFn,
 ): string {
-  return memberName(uid, members, currentUserId).charAt(0).toUpperCase();
+  return memberName(uid, members, currentUserId, t).charAt(0).toUpperCase();
 }
 
 // ── Status Badge ──────────────────────────────────────────────
@@ -92,12 +97,13 @@ function StatusBadge({
   onClick?: () => void;
   small?: boolean;
 }) {
+  const t = useT();
   const m = STATUS_META[status];
   return (
     <button
       type="button"
       onClick={onClick}
-      title={onClick ? "Klik untuk tukar status" : undefined}
+      title={onClick ? t("checklist.clickToChangeStatus") : undefined}
       className={cn(
         "inline-flex items-center gap-1 rounded-full border font-medium transition-all shrink-0",
         small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs",
@@ -107,7 +113,7 @@ function StatusBadge({
       )}
     >
       <span className={cn("rounded-full shrink-0", small ? "h-1.5 w-1.5" : "h-2 w-2", m.dot)} />
-      {m.label}
+      {t(`checklist.status.${status}`)}
     </button>
   );
 }
@@ -115,12 +121,13 @@ function StatusBadge({
 // ── Progress Bar ──────────────────────────────────────────────
 
 function ProgressBar({ tasks }: { tasks: ChecklistTask[] }) {
+  const t = useT();
   const total = tasks.length;
   const counts = useMemo(() => ({
-    not_yet: tasks.filter((t) => t.status === "not_yet").length,
-    in_progress: tasks.filter((t) => t.status === "in_progress").length,
-    settle: tasks.filter((t) => t.status === "settle").length,
-    kiv: tasks.filter((t) => t.status === "kiv").length,
+    not_yet: tasks.filter((x) => x.status === "not_yet").length,
+    in_progress: tasks.filter((x) => x.status === "in_progress").length,
+    settle: tasks.filter((x) => x.status === "settle").length,
+    kiv: tasks.filter((x) => x.status === "kiv").length,
   }), [tasks]);
 
   const pct = total > 0 ? Math.round((counts.settle / total) * 100) : 0;
@@ -128,7 +135,7 @@ function ProgressBar({ tasks }: { tasks: ChecklistTask[] }) {
   return (
     <Card className="p-5 border-border/60 bg-white/80">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-foreground">Progress Keseluruhan</p>
+        <p className="text-sm font-semibold text-foreground">{t("checklist.overallProgress")}</p>
         <span className="text-2xl font-bold text-primary font-heading">{pct}%</span>
       </div>
 
@@ -157,12 +164,12 @@ function ProgressBar({ tasks }: { tasks: ChecklistTask[] }) {
           ([s, m]) => (
             <span key={s} className="flex items-center gap-1 text-xs text-muted-foreground">
               <span className={cn("h-2 w-2 rounded-full shrink-0", m.dot)} />
-              {m.label} <strong className="text-foreground">{counts[s]}</strong>
+              {t(`checklist.status.${s}`)} <strong className="text-foreground">{counts[s]}</strong>
             </span>
           )
         )}
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          Jumlah <strong className="text-foreground">{total}</strong>
+          {t("checklist.total")} <strong className="text-foreground">{total}</strong>
         </span>
       </div>
     </Card>
@@ -186,6 +193,7 @@ function TaskExpandedPanel({
   onTogglePic: (uid: string) => void;
   onStatusChange: (status: ChecklistStatus) => void;
 }) {
+  const t = useT();
   const [localNotes, setLocalNotes] = useState(task.notes ?? "");
 
   return (
@@ -201,14 +209,14 @@ function TaskExpandedPanel({
         {/* Notes */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-            <StickyNote className="h-3 w-3" /> Catatan
+            <StickyNote className="h-3 w-3" /> {t("checklist.notes")}
           </label>
           <textarea
             rows={2}
             value={localNotes}
             onChange={(e) => setLocalNotes(e.target.value)}
             onBlur={() => onNotesBlur(localNotes)}
-            placeholder="Tambah catatan di sini…"
+            placeholder={t("checklist.notesPlaceholder")}
             className="w-full text-sm px-3 py-2 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
@@ -217,12 +225,12 @@ function TaskExpandedPanel({
         {members.length > 0 && (
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-              <Users className="h-3 w-3" /> Tanggungjawab
+              <Users className="h-3 w-3" /> {t("checklist.pic")}
             </label>
             <div className="flex flex-wrap gap-2">
               {members.map((m) => {
                 const active = task.assigned_to?.includes(m.user_id) ?? false;
-                const name = m.full_name ?? (m.user_id === currentUserId ? "Anda" : "Ahli");
+                const name = m.full_name ?? (m.user_id === currentUserId ? t("common.you") : t("common.member"));
                 return (
                   <button
                     key={m.user_id}
@@ -251,16 +259,16 @@ function TaskExpandedPanel({
 
         {/* Status Dropdown */}
         <div className="flex justify-end items-center gap-2">
-          <label className="text-xs font-medium text-muted-foreground mr-1">Status:</label>
+          <label className="text-xs font-medium text-muted-foreground mr-1">{t("checklist.status")}</label>
           <select
             value={task.status}
             onChange={(e) => onStatusChange(e.target.value as ChecklistStatus)}
             className="text-xs px-2.5 py-1.5 rounded-md border border-input bg-transparent shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
           >
-            <option value="not_yet">Belum Selesai</option>
-            <option value="in_progress">Sedang Lakukan</option>
-            <option value="settle">Selesai ✓</option>
-            <option value="kiv">KIV</option>
+            <option value="not_yet">{t("checklist.statusFull.not_yet")}</option>
+            <option value="in_progress">{t("checklist.statusFull.in_progress")}</option>
+            <option value="settle">{t("checklist.statusFull.settle")}</option>
+            <option value="kiv">{t("checklist.statusFull.kiv")}</option>
           </select>
         </div>
       </div>
@@ -287,6 +295,7 @@ function TaskItem({
   onTogglePic: (uid: string) => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const isSettled = task.status === "settle";
   const hasNotes = !!task.notes?.trim();
@@ -336,10 +345,10 @@ function TaskItem({
                   {task.assigned_to.slice(0, 3).map((uid) => (
                     <span
                       key={uid}
-                      title={memberName(uid, members, currentUserId)}
+                      title={memberName(uid, members, currentUserId, t)}
                       className="h-4 w-4 rounded-full bg-primary/20 text-primary text-[9px] font-bold flex items-center justify-center border border-white"
                     >
-                      {memberInitials(uid, members, currentUserId)}
+                      {memberInitials(uid, members, currentUserId, t)}
                     </span>
                   ))}
                 </div>
@@ -390,6 +399,7 @@ function TaskItem({
 // ── Seed Modal ────────────────────────────────────────────────
 
 function SeedModal({ onSeed, onDismiss, loading }: { onSeed: () => void; onDismiss: () => void; loading: boolean }) {
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <motion.div
@@ -413,11 +423,12 @@ function SeedModal({ onSeed, onDismiss, loading }: { onSeed: () => void; onDismi
 
         <div>
           <h3 className="font-heading font-bold text-lg text-foreground">
-            Guna template checklist? 🇲🇾
+            {t("checklist.seedTitle")}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Kami ada sediakan <strong>143 tugasan</strong> persiapan kahwin Malaysia yang lengkap — dari 12 bulan sebelum sampai hari majlis.
-          </p>
+          <p
+            className="text-sm text-muted-foreground mt-1"
+            dangerouslySetInnerHTML={{ __html: t("checklist.seedBody") }}
+          />
         </div>
 
         <div className="flex gap-2">
@@ -426,7 +437,7 @@ function SeedModal({ onSeed, onDismiss, loading }: { onSeed: () => void; onDismi
             disabled={loading}
             className="flex-1 bg-primary text-white hover:bg-primary/90"
           >
-            {loading ? "Memuatkan…" : "Ya, muatkan! ✨"}
+            {loading ? t("checklist.seedLoading") : t("checklist.seedLoad")}
           </Button>
           <Button
             onClick={onDismiss}
@@ -434,7 +445,7 @@ function SeedModal({ onSeed, onDismiss, loading }: { onSeed: () => void; onDismi
             variant="outline"
             className="flex-1"
           >
-            Tak perlu
+            {t("checklist.seedDismiss")}
           </Button>
         </div>
       </motion.div>
@@ -444,12 +455,12 @@ function SeedModal({ onSeed, onDismiss, loading }: { onSeed: () => void; onDismi
 
 // ── Filter Pills ──────────────────────────────────────────────
 
-const FILTER_OPTIONS: Array<{ value: "all" | ChecklistStatus; label: string }> = [
-  { value: "all", label: "Semua" },
-  { value: "not_yet", label: "Belum" },
-  { value: "in_progress", label: "Sedang" },
-  { value: "settle", label: "Selesai" },
-  { value: "kiv", label: "KIV" },
+const FILTER_OPTIONS: Array<{ value: "all" | ChecklistStatus; labelKey: string }> = [
+  { value: "all", labelKey: "checklist.filter.all" },
+  { value: "not_yet", labelKey: "checklist.filter.not_yet" },
+  { value: "in_progress", labelKey: "checklist.filter.in_progress" },
+  { value: "settle", labelKey: "checklist.filter.settle" },
+  { value: "kiv", labelKey: "checklist.filter.kiv" },
 ];
 
 function PhaseGroup({
@@ -471,6 +482,7 @@ function PhaseGroup({
   onTogglePic: (t: ChecklistTask, uid: string) => void;
   onDelete: (e: React.MouseEvent, t: ChecklistTask) => void;
 }) {
+  const t = useT();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!tasks || tasks.length === 0) return null;
@@ -484,7 +496,7 @@ function PhaseGroup({
       >
         <div className="flex items-center gap-2">
           <h3 className="font-heading font-semibold text-lg text-foreground uppercase tracking-wide text-left">
-            {phase}
+            {t(`phase.${phase}`)}
           </h3>
           <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
             {tasks.length}
@@ -535,6 +547,8 @@ function PhaseGroup({
 export default function ChecklistPage() {
   const { weddingId, isLoading: weddingLoading, members } = useWedding();
   const { user } = useUser();
+  const { lang } = useLanguage();
+  const t = useT();
   const { data: tasks = [], isLoading: tasksLoading } = useChecklistTasks();
 
   const statusMutation = useUpdateChecklistStatus();
@@ -588,13 +602,13 @@ export default function ChecklistPage() {
         const supabase = createClient();
         await logActivity({
           supabase, weddingId, userId: user.id,
-          action: `Tukar status → ${STATUS_META[newStatus].label}`,
+          action: `Tukar status → ${t(`checklist.status.${newStatus}`)}`,
           entityType: "checklist", entityName: task.title,
         });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -615,8 +629,8 @@ export default function ChecklistPage() {
     try {
       await detailsMutation.mutateAsync({ id: task.id, assigned_to: next });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -624,17 +638,17 @@ export default function ChecklistPage() {
     e.stopPropagation();
     try {
       await deleteMutation.mutateAsync(task.id);
-      toast({ title: "Dihapus!", variant: "default" });
+      toast({ title: t("checklist.taskDeleted"), variant: "default" });
       if (weddingId && user) {
         const supabase = createClient();
         await logActivity({
           supabase, weddingId, userId: user.id,
-          action: "Padam tugasan", entityType: "checklist", entityName: task.title,
+          action: "checklist.delete", entityType: "checklist", entityName: task.title,
         });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -643,7 +657,7 @@ export default function ChecklistPage() {
     if (!newTitle.trim() || !newPhase) return;
     try {
       await addMutation.mutateAsync({ title: newTitle.trim(), phase: newPhase });
-      toast({ title: "Berjaya!", description: "Tugasan baru ditambah.", variant: "success" });
+      toast({ title: t("common.success"), description: t("checklist.taskAdded"), variant: "success" });
       setNewTitle("");
       setNewPhase(PHASES[0]);
       setIsAddOpen(false);
@@ -651,23 +665,23 @@ export default function ChecklistPage() {
         const supabase = createClient();
         await logActivity({
           supabase, weddingId, userId: user.id,
-          action: "Tambah tugasan", entityType: "checklist", entityName: newTitle.trim(),
+          action: "checklist.add", entityType: "checklist", entityName: newTitle.trim(),
         });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
   const handleSeed = async () => {
     try {
-      await seedMutation.mutateAsync();
+      await seedMutation.mutateAsync(lang);
       setShowSeedModal(false);
-      toast({ title: "Template dimuatkan! ✨", description: "143 tugasan berjaya ditambah.", variant: "success" });
+      toast({ title: t("checklist.templateLoaded"), description: t("checklist.templateLoadedDesc"), variant: "success" });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat memuat template", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("checklist.loadTemplateError"), description: msg, variant: "error" });
     }
   };
 
@@ -704,9 +718,9 @@ export default function ChecklistPage() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Senarai Semak</h1>
+            <h1 className="text-3xl font-heading font-bold text-foreground">{t("checklist.title")}</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Jangan tertinggal sebarang persiapan penting.
+              {t("checklist.subtitle")}
             </p>
           </div>
           <Button
@@ -741,7 +755,7 @@ export default function ChecklistPage() {
                       : "bg-white text-muted-foreground border-border hover:border-primary/40"
                   )}
                 >
-                  {f.label}
+                  {t(f.labelKey)}
                   {count > 0 && (
                     <span
                       className={cn(
@@ -765,9 +779,9 @@ export default function ChecklistPage() {
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg font-heading font-bold text-foreground">Tiada Tugasan</h3>
+              <h3 className="text-lg font-heading font-bold text-foreground">{t("checklist.emptyTitle")}</h3>
               <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Tambah tugasan sendiri atau muat template checklist kahwin Malaysia yang lengkap.
+                {t("checklist.emptyBody")}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -776,11 +790,11 @@ export default function ChecklistPage() {
                 className="bg-primary text-white hover:bg-primary/90"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Muat Template
+                {t("checklist.loadTemplate")}
               </Button>
               <Button variant="outline" onClick={() => setIsAddOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Tambah Manual
+                {t("checklist.addManual")}
               </Button>
             </div>
           </Card>
@@ -789,7 +803,9 @@ export default function ChecklistPage() {
         {/* Filtered empty state */}
         {tasks.length > 0 && filtered.length === 0 && (
           <div className="text-center py-10 text-muted-foreground text-sm">
-            Tiada tugasan dengan status <strong>{STATUS_META[filter as ChecklistStatus]?.label}</strong>.
+            {t("checklist.filteredEmpty", {
+              status: t(`checklist.status.${filter as ChecklistStatus}`),
+            })}
           </div>
         )}
 
@@ -812,10 +828,10 @@ export default function ChecklistPage() {
       </div>
 
       {/* Add Task Dialog */}
-      <Dialog isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Tambah Tugasan">
+      <Dialog isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title={t("checklist.addTitle")}>
         <form onSubmit={handleAddTask} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">Fasa (Tempoh)</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("checklist.phaseLabel")}</label>
             <select
               value={newPhase}
               onChange={(e) => setNewPhase(e.target.value)}
@@ -823,17 +839,17 @@ export default function ChecklistPage() {
             >
               {PHASES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {t(`phase.${p}`)}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">Nama Tugasan</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("checklist.taskNameLabel")}</label>
             <Input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Contoh: Beli cincin kahwin"
+              placeholder={t("checklist.taskPlaceholder")}
               required
               autoFocus
             />
@@ -843,7 +859,7 @@ export default function ChecklistPage() {
             disabled={addMutation.isPending || !newTitle.trim()}
             className="w-full bg-primary text-white hover:bg-primary/90"
           >
-            {addMutation.isPending ? "Menyimpan…" : "Tambah"}
+            {addMutation.isPending ? t("common.saving") : t("checklist.add")}
           </Button>
         </form>
       </Dialog>

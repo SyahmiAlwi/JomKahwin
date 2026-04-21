@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { useT } from "@/lib/i18n/language-context";
 
 type Mode = "login" | "register" | "forgot";
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
 export function AuthForm() {
   const supabase = createClient();
   const { toast } = useToast();
+  const t = useT();
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -30,7 +33,6 @@ export function AuthForm() {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // redirect handled by middleware + onAuthStateChange
 
       } else if (mode === "register") {
         const { error } = await supabase.auth.signUp({
@@ -43,8 +45,8 @@ export function AuthForm() {
         });
         if (error) throw error;
         toast({
-          title: "Akaun berjaya dicipta!",
-          description: "Sila semak emel anda untuk pengesahan.",
+          title: t("auth.accountCreated"),
+          description: t("auth.accountCreatedBody"),
           variant: "success",
         });
         setMode("login");
@@ -57,15 +59,15 @@ export function AuthForm() {
         });
         if (error) throw error;
         toast({
-          title: "Emel dihantar!",
-          description: "Semak inbox anda untuk reset kata laluan.",
+          title: t("auth.emailSent"),
+          description: t("auth.emailSentBody"),
           variant: "success",
         });
         setMode("login");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Ralat tidak diketahui";
-      toast({ title: "Ralat", description: translateError(message), variant: "error" });
+      const message = err instanceof Error ? err.message : t("auth.errorUnknown");
+      toast({ title: t("common.error"), description: translateError(message, t), variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -78,27 +80,24 @@ export function AuthForm() {
       options: { redirectTo: `${location.origin}/auth/callback` },
     });
     if (error) {
-      toast({ title: "Ralat", description: error.message, variant: "error" });
+      toast({ title: t("common.error"), description: error.message, variant: "error" });
       setGoogleLoading(false);
     }
-    // on success: browser redirects, no need to setGoogleLoading(false)
   }
 
   const headings = {
-    login: { title: "Selamat Datang", subtitle: "Log masuk untuk meneruskan perancangan anda." },
-    register: { title: "Cipta Akaun", subtitle: "Mulakan perjalanan perkahwinan anda hari ini." },
-    forgot: { title: "Lupa Kata Laluan?", subtitle: "Kami akan hantar pautan reset ke emel anda." },
+    login: { title: t("auth.login.title"), subtitle: t("auth.login.subtitle") },
+    register: { title: t("auth.register.title"), subtitle: t("auth.register.subtitle") },
+    forgot: { title: t("auth.forgot.title"), subtitle: t("auth.forgot.subtitle") },
   };
 
   return (
     <div className="w-full flex flex-col gap-6">
-      {/* Form heading */}
       <div>
         <h2 className="font-heading text-2xl font-bold text-foreground">{headings[mode].title}</h2>
         <p className="text-sm text-muted-foreground mt-1">{headings[mode].subtitle}</p>
       </div>
 
-      {/* Google OAuth */}
       <Button
         type="button"
         variant="outline"
@@ -114,26 +113,24 @@ export function AuthForm() {
             <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
           </svg>
         )}
-        Teruskan dengan Google
+        {t("auth.continueGoogle")}
       </Button>
 
-      {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground font-medium">atau</span>
+        <span className="text-xs text-muted-foreground font-medium">{t("common.or")}</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      {/* Email/password form */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
         {mode === "register" && (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="fullName">Nama Penuh</Label>
+            <Label htmlFor="fullName">{t("common.fullName")}</Label>
             <Input
               id="fullName"
               type="text"
-              placeholder="Nama anda"
+              placeholder={t("auth.fullNamePlaceholder")}
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               required
@@ -143,11 +140,11 @@ export function AuthForm() {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Emel</Label>
+          <Label htmlFor="email">{t("common.email")}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="nama@emel.com"
+            placeholder={t("auth.emailPlaceholder")}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -158,14 +155,14 @@ export function AuthForm() {
         {mode !== "forgot" && (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Kata Laluan</Label>
+              <Label htmlFor="password">{t("common.password")}</Label>
               {mode === "login" && (
                 <button
                   type="button"
                   onClick={() => setMode("forgot")}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Lupa kata laluan?
+                  {t("auth.forgotPassword")}
                 </button>
               )}
             </div>
@@ -173,7 +170,7 @@ export function AuthForm() {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder={mode === "register" ? "Minimum 6 aksara" : "Kata laluan anda"}
+                placeholder={mode === "register" ? t("auth.passwordRegister") : t("auth.passwordLogin")}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -194,31 +191,30 @@ export function AuthForm() {
         )}
 
         <Button type="submit" isLoading={loading} className="w-full mt-1">
-          {mode === "login" && "Log Masuk"}
-          {mode === "register" && "Daftar Akaun"}
-          {mode === "forgot" && "Hantar Pautan Reset"}
+          {mode === "login" && t("auth.signInButton")}
+          {mode === "register" && t("auth.registerButton")}
+          {mode === "forgot" && t("auth.forgotButton")}
         </Button>
       </form>
 
-      {/* Mode switcher */}
       <div className="text-center text-sm text-muted-foreground">
         {mode === "login" && (
-          <>Belum ada akaun?{" "}
+          <>{t("auth.noAccount")}{" "}
             <button onClick={() => setMode("register")} className="text-foreground font-medium hover:underline">
-              Daftar sekarang
+              {t("auth.registerNow")}
             </button>
           </>
         )}
         {mode === "register" && (
-          <>Sudah ada akaun?{" "}
+          <>{t("auth.hasAccount")}{" "}
             <button onClick={() => setMode("login")} className="text-foreground font-medium hover:underline">
-              Log masuk
+              {t("auth.signIn")}
             </button>
           </>
         )}
         {mode === "forgot" && (
           <button onClick={() => setMode("login")} className="text-foreground font-medium hover:underline">
-            ← Kembali ke log masuk
+            {t("auth.backToLogin")}
           </button>
         )}
       </div>
@@ -227,12 +223,11 @@ export function AuthForm() {
   );
 }
 
-// Translate Supabase error messages to Malay
-function translateError(msg: string): string {
-  if (msg.includes("Invalid login credentials")) return "Emel atau kata laluan tidak sah.";
-  if (msg.includes("Email not confirmed")) return "Sila sahkan emel anda dahulu.";
-  if (msg.includes("User already registered")) return "Emel ini sudah didaftarkan.";
-  if (msg.includes("Password should be")) return "Kata laluan perlu sekurang-kurangnya 6 aksara.";
-  if (msg.includes("rate limit")) return "Terlalu banyak cubaan. Sila tunggu sebentar.";
+function translateError(msg: string, t: TranslateFn): string {
+  if (msg.includes("Invalid login credentials")) return t("auth.err.invalidCreds");
+  if (msg.includes("Email not confirmed")) return t("auth.err.notConfirmed");
+  if (msg.includes("User already registered")) return t("auth.err.alreadyRegistered");
+  if (msg.includes("Password should be")) return t("auth.err.passwordShort");
+  if (msg.includes("rate limit")) return t("auth.err.rateLimit");
   return msg;
 }

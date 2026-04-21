@@ -34,12 +34,15 @@ import { useWedding } from "@/components/providers/wedding-provider";
 import { useUser } from "@/components/providers/user-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 type DialogMode = "add_expense" | "edit_expense" | "add_fund" | "edit_fund";
 
 export default function BudgetPage() {
   const { weddingId, isLoading: weddingLoading } = useWedding();
   const { user } = useUser();
+  const { lang, t } = useLanguage();
+  const numLocale = lang === "en" ? "en-GB" : "ms-MY";
   const { data: categories = [] } = useBudgetCategories();
   const { data: expenses = [] } = useBudgetExpenses();
   const { data: funds = [] } = useBudgetFunds();
@@ -142,10 +145,10 @@ export default function BudgetPage() {
           amount: parseInt(newExpense.amount) || 0,
           total: parseInt(newExpense.total) || 0,
         });
-        toast({ title: "Berjaya!", description: "Perbelanjaan ditambah.", variant: "success" });
+        toast({ title: t("common.success"), description: t("budget.expenseAdded"), variant: "success" });
         if (weddingId && user) {
           const supabase = createClient();
-          await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah kategori bajet", entityType: "budget", entityName: cat.name });
+          await logActivity({ supabase, weddingId, userId: user.id, action: "budget.addCat", entityType: "budget", entityName: cat.name });
         }
       } else if (dialogMode === "edit_expense" && editId) {
         await updateExpenseMutation.mutateAsync({
@@ -154,23 +157,23 @@ export default function BudgetPage() {
           amount: parseInt(newExpense.amount) || 0,
           total: parseInt(newExpense.total) || 0,
         });
-        toast({ title: "Berjaya!", description: "Perbelanjaan dikemaskini.", variant: "success" });
+        toast({ title: t("common.success"), description: t("budget.expenseUpdated"), variant: "success" });
       }
       setNewExpense({ category: "", amount: "", total: "" });
       setIsDialogOpen(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm("Pasti mahu buang perbelanjaan ini?")) return;
+    if (!confirm(t("budget.confirmDeleteExpense"))) return;
     try {
       await deleteExpenseMutation.mutateAsync(id);
-      toast({ title: "Dibuang!", variant: "default" });
-    } catch (err: unknown) {
-      toast({ title: "Ralat!", description: "Gagal membuang rekod.", variant: "error" });
+      toast({ title: t("budget.deleted"), variant: "default" });
+    } catch {
+      toast({ title: t("common.error"), description: t("budget.deleteFail"), variant: "error" });
     }
   };
 
@@ -181,10 +184,10 @@ export default function BudgetPage() {
           source: newFund.source,
           amount: parseInt(newFund.amount) || 0,
         });
-        toast({ title: "Berjaya!", description: "Dana ditambah.", variant: "success" });
+        toast({ title: t("common.success"), description: t("budget.fundAdded"), variant: "success" });
         if (weddingId && user) {
           const supabase = createClient();
-          await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah dana tabung", entityType: "budget", entityName: newFund.source });
+          await logActivity({ supabase, weddingId, userId: user.id, action: "budget.addFund", entityType: "budget", entityName: newFund.source });
         }
       } else if (dialogMode === "edit_fund" && editId) {
         await updateFundMutation.mutateAsync({
@@ -192,23 +195,23 @@ export default function BudgetPage() {
           source: newFund.source,
           amount: parseInt(newFund.amount) || 0,
         });
-        toast({ title: "Berjaya!", description: "Dana dikemaskini.", variant: "success" });
+        toast({ title: t("common.success"), description: t("budget.fundUpdated"), variant: "success" });
       }
       setNewFund({ source: "", amount: "" });
       setIsDialogOpen(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
   const handleDeleteFund = async (id: string) => {
-    if (!confirm("Pasti mahu buang rekod dana ini?")) return;
+    if (!confirm(t("budget.confirmDeleteFund"))) return;
     try {
       await deleteFundMutation.mutateAsync(id);
-      toast({ title: "Dibuang!", variant: "default" });
-    } catch (err: unknown) {
-      toast({ title: "Ralat!", description: "Gagal membuang rekod.", variant: "error" });
+      toast({ title: t("budget.deleted"), variant: "default" });
+    } catch {
+      toast({ title: t("common.error"), description: t("budget.deleteFail"), variant: "error" });
     }
   };
 
@@ -225,8 +228,8 @@ export default function BudgetPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground">Bajet & Tabung</h1>
-          <p className="text-muted-foreground text-sm">Urus dana perkahwinan dan perbelanjaan anda.</p>
+          <h1 className="text-3xl font-heading font-bold text-foreground">{t("budget.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("budget.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -234,13 +237,13 @@ export default function BudgetPage() {
             onClick={() => openDialog("add_fund")}
           >
             <ArrowUpCircle className="h-4 w-4 mr-2" />
-            Tambah Dana
+            {t("budget.addFund")}
           </Button>
           <Button
             onClick={() => openDialog("add_expense")}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Tambah Belanja
+            {t("budget.addExpense")}
           </Button>
         </div>
       </div>
@@ -261,18 +264,18 @@ export default function BudgetPage() {
 
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="space-y-2">
-              <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Tabung Kahwin Terkumpul</p>
+              <p className="text-white/70 text-sm font-medium uppercase tracking-wider">{t("budget.totalCollected")}</p>
               <h2 className="text-5xl font-bold text-white tracking-tight mt-1">
-                RM {totalBudget.toLocaleString()}
+                RM {totalBudget.toLocaleString(numLocale)}
               </h2>
               <div className="flex flex-col gap-1 text-white/90 text-sm mt-2">
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="h-4 w-4 opacity-75" />
-                  <span>Belanja: RM {totalSpent.toLocaleString()}</span>
+                  <span>{t("budget.spent", { amount: totalSpent.toLocaleString(numLocale) })}</span>
                 </div>
                 <div className="flex items-center gap-2 font-bold">
                   <TrendingUp className="h-4 w-4" />
-                  <span>Baki: RM {remainingBudget.toLocaleString()}</span>
+                  <span>{t("budget.balance", { amount: remainingBudget.toLocaleString(numLocale) })}</span>
                 </div>
               </div>
             </div>
@@ -306,7 +309,7 @@ export default function BudgetPage() {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center flex-col text-white">
                   <span className="text-2xl font-bold">{percentage}%</span>
-                  <span className="text-[10px] uppercase tracking-wider opacity-80">Digunakan</span>
+                  <span className="text-[10px] uppercase tracking-wider opacity-80">{t("budget.used")}</span>
                 </div>
               </div>
             </div>
@@ -319,7 +322,7 @@ export default function BudgetPage() {
         <div className="lg:col-span-2 space-y-4">
           <h3 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-primary" />
-            Kategori Perbelanjaan
+            {t("budget.expenseCategories")}
           </h3>
           {displayExpenses.map((expense, index) => (
             <motion.div
@@ -354,7 +357,7 @@ export default function BudgetPage() {
                     <div className="flex justify-between items-center mb-1">
                       <p className="font-bold text-foreground truncate">{expense.category}</p>
                       <p className="font-medium text-foreground">
-                        RM {expense.amount.toLocaleString()}
+                        RM {expense.amount.toLocaleString(numLocale)}
                       </p>
                     </div>
                     <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
@@ -369,17 +372,18 @@ export default function BudgetPage() {
                     </div>
                     <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                       <span>
-                        {expense.total > 0
-                          ? Math.round((expense.amount / expense.total) * 100)
-                          : 0}
-                        % digunakan
+                        {t("budget.percentUsed", {
+                          pct: expense.total > 0
+                            ? Math.round((expense.amount / expense.total) * 100)
+                            : 0,
+                        })}
                       </span>
-                      <span>Daripada RM {expense.total.toLocaleString()}</span>
+                      <span>{t("budget.ofTotal", { amount: expense.total.toLocaleString(numLocale) })}</span>
                     </div>
                     {expense.vendorAmount > 0 && (
                       <p className="text-xs text-primary mt-1.5 flex items-center gap-1">
                         <span>🔗</span>
-                        Termasuk RM {expense.vendorAmount.toLocaleString()} dari vendor
+                        {t("budget.vendorIncluded", { amount: expense.vendorAmount.toLocaleString(numLocale) })}
                       </p>
                     )}
                   </div>
@@ -393,7 +397,7 @@ export default function BudgetPage() {
         <div className="space-y-4">
           <h3 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
             <History className="h-5 w-5 text-accent" />
-            Rekod Tabung
+            {t("budget.fundRecord")}
           </h3>
           <div className="space-y-3">
             {displayFunds.map((fund, index) => (
@@ -409,7 +413,7 @@ export default function BudgetPage() {
                     <p className="text-xs text-muted-foreground">{fund.date}</p>
                   </div>
                   <span className="text-accent-foreground font-bold text-sm bg-accent px-3 py-1.5 rounded-lg shadow-gold-sm relative z-10">
-                    + RM {fund.amount.toLocaleString()}
+                    + RM {fund.amount.toLocaleString(numLocale)}
                   </span>
                   
                   {/* Actions overlay */}
@@ -439,10 +443,10 @@ export default function BudgetPage() {
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         title={
-          dialogMode === "add_expense" ? "Tambah Perbelanjaan" :
-          dialogMode === "edit_expense" ? "Kemaskini Perbelanjaan" :
-          dialogMode === "add_fund" ? "Masuk Dana Tabung" :
-          "Kemaskini Dana"
+          dialogMode === "add_expense" ? t("budget.dialog.addExpense") :
+          dialogMode === "edit_expense" ? t("budget.dialog.editExpense") :
+          dialogMode === "add_fund" ? t("budget.dialog.addFund") :
+          t("budget.dialog.editFund")
         }
       >
         {dialogMode.includes("expense") ? (
@@ -454,17 +458,17 @@ export default function BudgetPage() {
             className="space-y-4"
           >
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Kategori</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("budget.categoryLabel")}</label>
               <Input
                 value={newExpense.category}
                 onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                placeholder="Contoh: Hantaran"
+                placeholder={t("budget.categoryPlaceholder")}
                 required
               />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">
-                Jumlah Dibelanjakan (RM)
+                {t("budget.amountSpent")}
               </label>
               <Input
                 type="number"
@@ -476,7 +480,7 @@ export default function BudgetPage() {
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">
-                Bajet Keseluruhan (RM)
+                {t("budget.totalBudget")}
               </label>
               <Input
                 type="number"
@@ -491,7 +495,7 @@ export default function BudgetPage() {
               disabled={addExpenseMutation.isPending || updateExpenseMutation.isPending}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {(addExpenseMutation.isPending || updateExpenseMutation.isPending) ? "Menyimpan..." : "Simpan Belanja"}
+              {(addExpenseMutation.isPending || updateExpenseMutation.isPending) ? t("common.saving") : t("budget.saveExpense")}
             </Button>
           </form>
         ) : (
@@ -503,16 +507,16 @@ export default function BudgetPage() {
             className="space-y-4"
           >
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Sumber Dana</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("budget.fundSource")}</label>
               <Input
                 value={newFund.source}
                 onChange={(e) => setNewFund({ ...newFund, source: e.target.value })}
-                placeholder="Contoh: Gaji Bulan Ini, Simpanan"
+                placeholder={t("budget.fundPlaceholder")}
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Jumlah (RM)</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("budget.amount")}</label>
               <Input
                 type="number"
                 value={newFund.amount}
@@ -526,7 +530,7 @@ export default function BudgetPage() {
               disabled={addFundMutation.isPending || updateFundMutation.isPending}
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
             >
-              {(addFundMutation.isPending || updateFundMutation.isPending) ? "Menyimpan..." : "Simpan Dana"}
+              {(addFundMutation.isPending || updateFundMutation.isPending) ? t("common.saving") : t("budget.saveFund")}
             </Button>
           </form>
         )}

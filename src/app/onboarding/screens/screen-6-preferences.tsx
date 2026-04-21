@@ -7,9 +7,11 @@ import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { PREFERENCE_OPTIONS } from "@/lib/onboarding-utils";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
 import { Check } from "lucide-react";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function Screen6Preferences() {
   const { setPreferences, nextScreen } = useOnboarding();
+  const t = useT();
   const [selected, setSelected] = useState<string[]>([]);
 
   const handleToggle = (id: string) => {
@@ -40,10 +42,10 @@ export default function Screen6Preferences() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Apa yang paling urgent nak atur dulu?
+            {t("onb.s6.title")}
           </h1>
           <p className="text-muted-foreground">
-            Pilih yang penting untuk korang. Help us tailor your experience!
+            {t("onb.s6.subtitle")}
           </p>
         </div>
 
@@ -64,7 +66,7 @@ export default function Screen6Preferences() {
             >
               <div className="flex flex-col gap-1">
                 <div className="text-2xl">{option.emoji}</div>
-                <p className="font-semibold text-sm text-foreground">{option.label}</p>
+                <p className="font-semibold text-sm text-foreground">{t(option.labelKey)}</p>
               </div>
 
               {/* Checkmark indicator */}
@@ -83,10 +85,10 @@ export default function Screen6Preferences() {
         {/* Buttons */}
         <div className="flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={nextScreen}>
-            Skip je
+            {t("onb.s6.skip")}
           </Button>
           <Button className="flex-1" onClick={handleContinue}>
-            Setup Done
+            {t("onb.s6.done")}
           </Button>
         </div>
       </motion.div>

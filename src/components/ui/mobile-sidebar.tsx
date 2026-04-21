@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/components/providers/user-provider";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { Loader2, Camera } from "lucide-react";
+import { useT } from "@/lib/i18n/language-context";
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -23,8 +24,9 @@ export function MobileSidebar({
     const { user, uploadPhoto, isLoading } = useUser();
     const [isCropperOpen, setIsCropperOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const t = useT();
 
-    const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Tetamu";
+    const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || t("sidebar.guest");
     const userInitial = userName.charAt(0).toUpperCase();
     const avatarUrl = user?.user_metadata?.avatar_url;
 
@@ -48,14 +50,14 @@ export function MobileSidebar({
     const pathname = usePathname();
 
     const menuItems = [
-        { icon: Home, label: "Utama", href: "/dashboard" },
-        { icon: Calendar, label: "Majlis", href: "/dashboard/countdown" },
-        { icon: CheckSquare, label: "Senarai Semak", href: "/dashboard/checklist" },
-        { icon: Wallet, label: "Bajet", href: "/dashboard/budget" },
-        { icon: Store, label: "Vendor", href: "/dashboard/suppliers" },
-        { icon: Users, label: "Senarai Tetamu", href: "/dashboard/guests" },
-        { icon: Activity, label: "Aktiviti", href: "/dashboard/activity" },
-        { icon: User, label: "Tetapan", href: "/dashboard/settings" },
+        { icon: Home, label: t("nav.home"), href: "/dashboard" },
+        { icon: Calendar, label: t("nav.events"), href: "/dashboard/countdown" },
+        { icon: CheckSquare, label: t("nav.checklist"), href: "/dashboard/checklist" },
+        { icon: Wallet, label: t("nav.budget"), href: "/dashboard/budget" },
+        { icon: Store, label: t("nav.vendors"), href: "/dashboard/suppliers" },
+        { icon: Users, label: t("nav.guests"), href: "/dashboard/guests" },
+        { icon: Activity, label: t("nav.activity"), href: "/dashboard/activity" },
+        { icon: User, label: t("nav.settings"), href: "/dashboard/settings" },
     ];
 
     const sidebarContent = (
@@ -125,7 +127,7 @@ export function MobileSidebar({
                         <h2 className="text-base font-bold text-white font-heading leading-tight">
                             {userName}
                         </h2>
-                        <p className="text-white/40 text-xs mt-0.5">Perancang Perkahwinan</p>
+                        <p className="text-white/40 text-xs mt-0.5">{t("sidebar.role")}</p>
                     </div>
                 </div>
 
@@ -177,7 +179,7 @@ export function MobileSidebar({
             {/* Bottom branding */}
             <div className="relative z-10 px-6 py-5">
                 <div className="h-px bg-white/10 mb-4" />
-                <p className="text-white/20 text-xs text-center tracking-wider">JomKahwin! v1.0</p>
+                <p className="text-white/20 text-xs text-center tracking-wider">{t("brand.version")}</p>
             </div>
         </div>
     );
@@ -208,7 +210,7 @@ export function MobileSidebar({
                         <button
                             onClick={onClose}
                             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-20"
-                            aria-label="Close menu"
+                            aria-label={t("sidebar.closeMenu")}
                         >
                             <X className="w-4 h-4 text-white" />
                         </button>

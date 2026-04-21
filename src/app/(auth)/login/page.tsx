@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { AuthForm } from "@/components/features/auth-form";
 import { Heart } from "lucide-react";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function LoginPage() {
+    const t = useT();
     return (
         <main className="min-h-screen flex overflow-hidden">
 
@@ -47,16 +49,15 @@ export default function LoginPage() {
                     </h1>
 
                     <p className="text-white/60 text-lg leading-relaxed mb-10">
-                        Rancang majlis perkahwinan impian anda bersama-sama, dari bajet hingga tetamu.
+                        {t("brand.tagline")}
                     </p>
 
-                    {/* Features list */}
                     <div className="space-y-3 text-left">
                         {[
-                            { emoji: "💰", text: "Jejak bajet & tabung kahwin" },
-                            { emoji: "👥", text: "Senarai tetamu mudah" },
-                            { emoji: "✅", text: "Senarai semak perkahwinan" },
-                            { emoji: "💍", text: "Countdown ke hari istimewa" },
+                            { emoji: "💰", text: t("auth.features.budget") },
+                            { emoji: "👥", text: t("auth.features.guests") },
+                            { emoji: "✅", text: t("auth.features.checklist") },
+                            { emoji: "💍", text: t("auth.features.countdown") },
                         ].map((item, i) => (
                             <motion.div
                                 key={i}
@@ -79,7 +80,7 @@ export default function LoginPage() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1 }}
                 >
-                    Percuma sepenuhnya · Untuk pasangan Malaysia
+                    {t("auth.footerTagline")}
                 </motion.p>
             </div>
 
@@ -92,8 +93,8 @@ export default function LoginPage() {
                             <Heart className="h-6 w-6 text-primary fill-primary/20" />
                         </div>
                     </div>
-                    <h1 className="font-heading text-3xl font-bold text-foreground">JomKahwin!</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Rancang majlis impian anda.</p>
+                    <h1 className="font-heading text-3xl font-bold text-foreground">{t("brand.title")}</h1>
+                    <p className="text-muted-foreground text-sm mt-1">{t("brand.taglineShort")}</p>
                 </div>
 
                 {/* Auth card */}
@@ -108,9 +109,9 @@ export default function LoginPage() {
                     </div>
 
                     <p className="text-center text-xs text-muted-foreground mt-6">
-                        Dengan meneruskan, anda bersetuju dengan{" "}
-                        <span className="text-primary hover:underline cursor-pointer">terma perkhidmatan</span>{" "}
-                        kami.
+                        {t("auth.terms")}{" "}
+                        <span className="text-primary hover:underline cursor-pointer">{t("auth.termsOfService")}</span>{" "}
+                        {t("auth.termsSuffix")}
                     </p>
                 </motion.div>
             </div>

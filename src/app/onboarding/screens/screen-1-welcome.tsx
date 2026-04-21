@@ -5,9 +5,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Heart, ChevronRight } from "lucide-react";
 import { useOnboarding } from "@/lib/contexts/onboarding-context";
+import { useT } from "@/lib/i18n/language-context";
 
 export default function Screen1Welcome() {
   const router = useRouter();
+  const t = useT();
   const { nextScreen, skipOnboarding } = useOnboarding();
 
   const handleSkip = () => {
@@ -34,7 +36,7 @@ export default function Screen1Welcome() {
             onClick={handleSkip}
             className="text-white/40 hover:text-white/70 text-sm transition-colors font-medium"
           >
-            Langkau
+            {t("onb.skip")}
           </button>
         </div>
 
@@ -52,11 +54,11 @@ export default function Screen1Welcome() {
           </div>
 
           <h1 className="font-heading text-4xl font-bold text-white leading-tight mb-3">
-            Majlis Kita,<br />
-            <span className="text-gradient-primary">Dalam satu platform!</span>
+            {t("onb.s1.title1")}<br />
+            <span className="text-gradient-primary">{t("onb.s1.title2")}</span>
           </h1>
           <p className="text-white/55 text-base leading-relaxed max-w-xs mx-auto">
-            Organize setiap ringgit dalam suatu tempat. Partner always up-to-date!.
+            {t("onb.s1.subtitle")}
           </p>
         </motion.div>
       </div>
@@ -71,10 +73,10 @@ export default function Screen1Welcome() {
       {/* Content cards */}
       <div className="flex-1 px-6 -mt-2 space-y-4 pb-6">
         {[
-          { emoji: "💰", title: "Bajet Sekilas Pandang", desc: "Tahu berapa dah habis, berapa lagi ada." },
-          { emoji: "👥", title: "Senarai RSVP Guest", desc: "Manage jemputan mengikut kumpulan." },
-          { emoji: "✅", title: "Checklist Perkahwinan", desc: "Tak tertinggal satu pun persiapan." },
-          { emoji: "💍", title: "Countdown Hari Istimewa", desc: "Lihat kiraan hari hingga majlis." },
+          { emoji: "💰", title: t("onb.s1.feat1.title"), desc: t("onb.s1.feat1.desc") },
+          { emoji: "👥", title: t("onb.s1.feat2.title"), desc: t("onb.s1.feat2.desc") },
+          { emoji: "✅", title: t("onb.s1.feat3.title"), desc: t("onb.s1.feat3.desc") },
+          { emoji: "💍", title: t("onb.s1.feat4.title"), desc: t("onb.s1.feat4.desc") },
         ].map((item, i) => (
           <motion.div
             key={i}
@@ -102,11 +104,11 @@ export default function Screen1Welcome() {
           transition={{ delay: 0.8 }}
         >
           <Button size="lg" className="w-full shadow-rose-md" onClick={nextScreen}>
-            Jom Start!
+            {t("onb.s1.cta")}
             <ChevronRight className="ml-2 h-5 w-5" />
           </Button>
           <p className="text-center text-xs text-muted-foreground mt-3">
-            Percuma sepenuhnya · Tiada kad kredit diperlukan
+            {t("onb.s1.footer")}
           </p>
         </motion.div>
       </div>

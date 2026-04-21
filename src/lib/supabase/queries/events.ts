@@ -128,3 +128,18 @@ export function formatDateMY(dateStr: string): string {
   const d = new Date(dateStr);
   return `${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
 }
+
+/** Formats an ISO date string to English (UK) display (e.g. "15 Mar 2025"). */
+export function formatDateEN(dateStr: string): string {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const d = new Date(dateStr);
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Formats a date based on the caller's current language (ms or en). */
+export function formatDate(dateStr: string, lang: "ms" | "en"): string {
+  return lang === "en" ? formatDateEN(dateStr) : formatDateMY(dateStr);
+}

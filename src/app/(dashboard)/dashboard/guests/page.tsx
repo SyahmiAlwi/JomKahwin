@@ -36,6 +36,7 @@ import { useWedding } from "@/components/providers/wedding-provider";
 import { useUser } from "@/components/providers/user-provider";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useT } from "@/lib/i18n/language-context";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ function getGroupIcon(name: string): LucideIcon {
 export default function GuestListPage() {
   const { weddingId, isLoading: weddingLoading } = useWedding();
   const { user } = useUser();
+  const t = useT();
   const [searchTerm, setSearchTerm] = useState("");
 
   // groups: start from defaults; updated when DB guests load
@@ -193,7 +195,7 @@ export default function GuestListPage() {
     e.preventDefault();
     const selectedGroup =
       groups.find((g) => g.id === (newGuest.group || groups[0]?.id)) ?? groups[0];
-    const guestName = newGuest.name || "Tetamu";
+    const guestName = newGuest.name || t("sidebar.guest");
     try {
       await addGuestMutation.mutateAsync({
         name: guestName,
@@ -203,16 +205,16 @@ export default function GuestListPage() {
         group_color: selectedGroup?.color ?? DEFAULT_GROUPS[0].color,
         pax: Number(newGuest.pax) || 1,
       });
-      toast({ title: "Berjaya!", description: "Tetamu baru ditambah.", variant: "success" });
+      toast({ title: t("common.success"), description: t("guests.added"), variant: "success" });
       setNewGuest({ name: "", relation: "", phone: "", pax: 1, group: "" });
       setIsAddGuestOpen(false);
       if (weddingId && user) {
         const supabase = createClient();
-        await logActivity({ supabase, weddingId, userId: user.id, action: "Tambah tetamu", entityType: "guest", entityName: guestName });
+        await logActivity({ supabase, weddingId, userId: user.id, action: "guest.add", entityType: "guest", entityName: guestName });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -231,16 +233,16 @@ export default function GuestListPage() {
         pax: editingGuest.pax,
         rsvp_status: editingGuest.rsvp,
       });
-      toast({ title: "Dikemaskini!", description: "Maklumat tetamu telah dikemaskini.", variant: "success" });
+      toast({ title: t("common.updated"), description: t("guests.updated"), variant: "success" });
       if (weddingId && user) {
         const supabase = createClient();
-        await logActivity({ supabase, weddingId, userId: user.id, action: "Kemaskini tetamu", entityType: "guest", entityName: editingGuest.name });
+        await logActivity({ supabase, weddingId, userId: user.id, action: "guest.update", entityType: "guest", entityName: editingGuest.name });
       }
       setEditingGuest(null);
       setIsEditGuestOpen(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -249,14 +251,14 @@ export default function GuestListPage() {
     const guestToDelete = guests.find(g => g.id === id);
     try {
       await deleteGuestMutation.mutateAsync(id);
-      toast({ title: "Dihapus!", description: "Tetamu telah dipadam.", variant: "default" });
+      toast({ title: t("common.deleted"), description: t("guests.deleted"), variant: "default" });
       if (weddingId && user) {
         const supabase = createClient();
-        await logActivity({ supabase, weddingId, userId: user.id, action: "Padam tetamu", entityType: "guest", entityName: guestToDelete?.name });
+        await logActivity({ supabase, weddingId, userId: user.id, action: "guest.delete", entityType: "guest", entityName: guestToDelete?.name });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
   };
 
@@ -276,7 +278,7 @@ export default function GuestListPage() {
     try {
       await updateGuestMutation.mutateAsync({ id: guestId, rsvp_status: cycle[currentRsvp] });
     } catch (err: unknown) {
-      toast({ title: "Ralat!", description: err instanceof Error ? err.message : "Ralat berlaku.", variant: "error" });
+      toast({ title: t("common.error"), description: err instanceof Error ? err.message : t("common.tryAgain"), variant: "error" });
     }
   };
 
@@ -302,10 +304,10 @@ export default function GuestListPage() {
               : g
           )
         );
-        toast({ title: "Disimpan!", description: "Kumpulan dikemaskini.", variant: "success" });
+        toast({ title: t("common.updated"), description: t("guests.groupUpdated"), variant: "success" });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Ralat";
-        toast({ title: "Ralat!", description: msg, variant: "error" });
+        const msg = err instanceof Error ? err.message : t("common.error");
+        toast({ title: t("common.error"), description: msg, variant: "error" });
       }
     } else {
       // New group — stored locally until first guest is added to it
@@ -316,7 +318,7 @@ export default function GuestListPage() {
         color: editingGroup.color ?? COLOR_PRESETS[0].class,
       };
       setLocalGroups((prev) => [...prev, newGroup]);
-      toast({ title: "Berjaya!", description: "Kumpulan baru dicipta.", variant: "success" });
+      toast({ title: t("common.success"), description: t("guests.groupAdded"), variant: "success" });
     }
     setEditingGroup(null);
   };
@@ -324,8 +326,8 @@ export default function GuestListPage() {
   const handleDeleteGroup = async (id: string) => {
     if (groups.length <= 1) {
       toast({
-        title: "Ralat!",
-        description: "Anda mesti mempunyai sekurang-kurangnya satu kumpulan.",
+        title: t("common.error"),
+        description: t("guests.mustHaveOneGroup"),
         variant: "error",
       });
       return;
@@ -340,11 +342,19 @@ export default function GuestListPage() {
         toColor: fallback.color,
       });
       setLocalGroups((prev) => prev.filter((g) => g.id !== id));
-      toast({ title: "Dihapus!", description: "Kumpulan dipadam.", variant: "default" });
+      toast({ title: t("common.deleted"), description: t("guests.groupDeleted"), variant: "default" });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ralat";
-      toast({ title: "Ralat!", description: msg, variant: "error" });
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: t("common.error"), description: msg, variant: "error" });
     }
+  };
+
+  // Resolves a group's display label, preferring translations for canonical
+  // default groups (e.g. "Keluarga Lelaki") while falling back to the raw name.
+  const groupLabel = (g: Group) => {
+    const key = `group.${g.id}`;
+    const translated = t(key);
+    return translated === key ? g.label : translated;
   };
 
   // ── Render ───────────────────────────────────────────────────
@@ -362,8 +372,8 @@ export default function GuestListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground">Senarai Tetamu</h1>
-          <p className="text-muted-foreground text-sm">Urus jemputan mengikut kumpulan dan pax.</p>
+          <h1 className="text-3xl font-heading font-bold text-foreground">{t("guests.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("guests.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -371,7 +381,7 @@ export default function GuestListPage() {
             className="rounded-full px-6"
           >
             <UserPlus className="h-5 w-5 mr-2" />
-            Tambah Tetamu
+            {t("guests.addButton")}
           </Button>
         </div>
       </div>
@@ -390,16 +400,16 @@ export default function GuestListPage() {
         >
           <div className="relative z-10">
             <p className="text-white/80 font-medium mb-2 flex items-center gap-2">
-              Anggaran Kehadiran (Pax)
+              {t("guests.heroLabel")}
               <Settings className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
             </p>
             <h2 className="text-5xl font-bold tracking-tight">
               {totalPax}{" "}
-              <span className="text-2xl opacity-60 font-normal">/ {totalGuests} Contact</span>
+              <span className="text-2xl opacity-60 font-normal">{t("guests.contactCount", { total: totalGuests })}</span>
             </h2>
             <div className="mt-4 flex gap-2">
               <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium border border-white/10">
-                Total Confirmed Pax
+                {t("guests.chipTotalConfirmed")}
               </div>
             </div>
           </div>
@@ -433,11 +443,11 @@ export default function GuestListPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium truncate mb-0.5">
-                    {stat.label}
+                    {groupLabel(stat)}
                   </p>
                   <p className={`text-2xl font-bold ${stat.color.split(" ")[0]}`}>
                     {stat.count}
-                    <span className="text-xs text-muted-foreground ml-1 font-medium">pax</span>
+                    <span className="text-xs text-muted-foreground ml-1 font-medium">{t("guests.pax").toLowerCase()}</span>
                   </p>
                 </div>
               </Card>
@@ -450,7 +460,7 @@ export default function GuestListPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
-          placeholder="Cari nama, hubungan, atau kumpulan..."
+          placeholder={t("guests.searchPlaceholder")}
           className="pl-10 h-12 rounded-2xl bg-white border-border/50 focus:ring-primary/20 shadow-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -487,7 +497,7 @@ export default function GuestListPage() {
                         <span
                           className={`w-2 h-2 rounded-full ${groupInfo?.color.replace("text-", "bg-").split(" ")[0]}`}
                         />
-                        {groupInfo?.label}
+                        {groupInfo ? groupLabel(groupInfo) : ""}
                       </span>
                       <span className="text-border">•</span>
                       <span>{guest.relation}</span>
@@ -499,7 +509,7 @@ export default function GuestListPage() {
                 <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0 pl-16 md:pl-0">
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-0.5">
-                      Pax
+                      {t("guests.pax")}
                     </p>
                     <div className="flex items-center gap-1 bg-secondary/50 px-3 py-1 rounded-full text-foreground font-bold">
                       <Users className="h-3 w-3" />
@@ -510,7 +520,7 @@ export default function GuestListPage() {
                   {/* RSVP toggle — click to cycle pending → hadir → tidak → pending */}
                   <button
                     onClick={(e) => handleRsvpToggle(e, guest.id, guest.rsvp)}
-                    title="Klik untuk tukar status RSVP"
+                    title={t("guests.rsvp.tooltip")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:scale-105 active:scale-95 ${
                       guest.rsvp === "hadir"
                         ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
@@ -522,7 +532,7 @@ export default function GuestListPage() {
                     <span className="text-[10px]">
                       {guest.rsvp === "hadir" ? "✓" : guest.rsvp === "tidak" ? "✗" : "?"}
                     </span>
-                    {guest.rsvp === "hadir" ? "Hadir" : guest.rsvp === "tidak" ? "Tidak" : "Belum"}
+                    {guest.rsvp === "hadir" ? t("guests.rsvp.attending") : guest.rsvp === "tidak" ? t("guests.rsvp.notAttending") : t("guests.rsvp.pending")}
                   </button>
 
                   <div className="flex items-center gap-2">
@@ -567,30 +577,30 @@ export default function GuestListPage() {
       </div>
 
       {/* ── Add Guest Dialog ───────────────────────────────────── */}
-      <Dialog isOpen={isAddGuestOpen} onClose={() => setIsAddGuestOpen(false)} title="Tambah Tetamu Baru">
+      <Dialog isOpen={isAddGuestOpen} onClose={() => setIsAddGuestOpen(false)} title={t("guests.addDialog.title")}>
         <form onSubmit={handleAddGuest} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">Nama Penuh</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.fullName")}</label>
             <Input
               value={newGuest.name}
               onChange={(e) => setNewGuest({ ...newGuest, name: e.target.value })}
-              placeholder="Contoh: Ali Bin Abu"
+              placeholder={t("guests.namePlaceholder")}
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Hubungan</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.relation")}</label>
               <Input
                 value={newGuest.relation}
                 onChange={(e) => setNewGuest({ ...newGuest, relation: e.target.value })}
-                placeholder="Contoh: Sepupu"
+                placeholder={t("guests.relationPlaceholder")}
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">No. Telefon</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.phone")}</label>
               <Input
                 type="tel"
                 value={newGuest.phone}
@@ -604,7 +614,7 @@ export default function GuestListPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">
-                Kumpulan Undangan
+                {t("guests.inviteGroup")}
               </label>
               <div className="relative">
                 <select
@@ -614,7 +624,7 @@ export default function GuestListPage() {
                 >
                   {groups.map((g) => (
                     <option key={g.id} value={g.id}>
-                      {g.label}
+                      {groupLabel(g)}
                     </option>
                   ))}
                 </select>
@@ -622,7 +632,7 @@ export default function GuestListPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Jumlah Pax</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.paxCount")}</label>
               <Input
                 type="number"
                 min="1"
@@ -639,7 +649,7 @@ export default function GuestListPage() {
             disabled={addGuestMutation.isPending}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
           >
-            {addGuestMutation.isPending ? "Menyimpan..." : "Simpan Tetamu"}
+            {addGuestMutation.isPending ? t("common.saving") : t("guests.saveGuest")}
           </Button>
         </form>
       </Dialog>
@@ -648,32 +658,32 @@ export default function GuestListPage() {
       <Dialog
         isOpen={isEditGuestOpen}
         onClose={() => { setIsEditGuestOpen(false); setEditingGuest(null); }}
-        title="Kemaskini Tetamu"
+        title={t("guests.editDialog.title")}
       >
         {editingGuest && (
           <form onSubmit={handleUpdateGuest} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Nama Penuh</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.fullName")}</label>
               <Input
                 value={editingGuest.name}
                 onChange={(e) => setEditingGuest({ ...editingGuest, name: e.target.value })}
-                placeholder="Contoh: Ali Bin Abu"
+                placeholder={t("guests.namePlaceholder")}
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Hubungan</label>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.relation")}</label>
                 <Input
                   value={editingGuest.relation}
                   onChange={(e) => setEditingGuest({ ...editingGuest, relation: e.target.value })}
-                  placeholder="Contoh: Sepupu"
+                  placeholder={t("guests.relationPlaceholder")}
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">No. Telefon</label>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.phone")}</label>
                 <Input
                   type="tel"
                   value={editingGuest.phone}
@@ -687,7 +697,7 @@ export default function GuestListPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">
-                  Kumpulan Undangan
+                  {t("guests.inviteGroup")}
                 </label>
                 <div className="relative">
                   <select
@@ -697,7 +707,7 @@ export default function GuestListPage() {
                   >
                     {groups.map((g) => (
                       <option key={g.id} value={g.id}>
-                        {g.label}
+                        {groupLabel(g)}
                       </option>
                     ))}
                   </select>
@@ -705,7 +715,7 @@ export default function GuestListPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Jumlah Pax</label>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.paxCount")}</label>
                 <Input
                   type="number"
                   min="1"
@@ -720,7 +730,7 @@ export default function GuestListPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Status RSVP</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("guests.rsvp.label")}</label>
               <select
                 className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none"
                 value={editingGuest.rsvp}
@@ -731,9 +741,9 @@ export default function GuestListPage() {
                   })
                 }
               >
-                <option value="pending">Belum Sahkan</option>
-                <option value="hadir">Hadir</option>
-                <option value="tidak">Tidak Hadir</option>
+                <option value="pending">{t("guests.rsvp.pendingLong")}</option>
+                <option value="hadir">{t("guests.rsvp.attendingLong")}</option>
+                <option value="tidak">{t("guests.rsvp.notAttendingLong")}</option>
               </select>
             </div>
 
@@ -742,7 +752,7 @@ export default function GuestListPage() {
               disabled={updateGuestMutation.isPending}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
             >
-              {updateGuestMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+              {updateGuestMutation.isPending ? t("common.saving") : t("common.saveChanges")}
             </Button>
           </form>
         )}
@@ -755,9 +765,9 @@ export default function GuestListPage() {
         title={
           editingGroup
             ? editingGroup.id
-              ? "Kemaskini Kumpulan"
-              : "Tambah Kumpulan"
-            : "Urus Kumpulan Undangan"
+              ? t("guests.groupDialog.editTitle")
+              : t("guests.groupDialog.addTitle")
+            : t("guests.groupDialog.manageTitle")
         }
       >
         <div className="space-y-6">
@@ -768,12 +778,12 @@ export default function GuestListPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                      Nama Kumpulan
+                      {t("guests.groupNameLabel")}
                     </label>
                     <Input
                       value={editingGroup.label || ""}
                       onChange={(e) => setEditingGroup({ ...editingGroup, label: e.target.value })}
-                      placeholder="Contoh: Jiran Tetangga"
+                      placeholder={t("guests.groupNamePlaceholder")}
                       className="bg-white"
                       autoFocus
                     />
@@ -782,7 +792,7 @@ export default function GuestListPage() {
                   {/* Color Selection */}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-2 block flex items-center gap-1">
-                      <Palette className="h-3 w-3" /> Tema Warna
+                      <Palette className="h-3 w-3" /> {t("guests.themeColour")}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {COLOR_PRESETS.map((preset) => (
@@ -800,7 +810,7 @@ export default function GuestListPage() {
                   {/* Icon Selection */}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-2 block flex items-center gap-1">
-                      <Star className="h-3 w-3" /> Ikon
+                      <Star className="h-3 w-3" /> {t("guests.icon")}
                     </label>
                     <div className="flex gap-3">
                       {ICON_PRESETS.map((preset) => (
@@ -823,14 +833,14 @@ export default function GuestListPage() {
                       disabled={!editingGroup.label || updateGroupMutation.isPending}
                       className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                      {editingGroup.id ? "Simpan Perubahan" : "Simpan Kumpulan"}
+                      {editingGroup.id ? t("common.saveChanges") : t("guests.saveGroup")}
                     </Button>
                     <Button
                       onClick={() => setEditingGroup(null)}
                       variant="outline"
                       className="flex-1"
                     >
-                      Batal
+                      {t("common.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -849,7 +859,7 @@ export default function GuestListPage() {
                       <div className={`p-2 rounded-md ${group.color} bg-opacity-20`}>
                         <group.icon className={`h-4 w-4 ${group.color.split(" ")[0]}`} />
                       </div>
-                      <span className="font-medium text-sm text-foreground">{group.label}</span>
+                      <span className="font-medium text-sm text-foreground">{groupLabel(group)}</span>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
@@ -880,7 +890,7 @@ export default function GuestListPage() {
                   <div className="p-2 rounded-md bg-muted group-hover:bg-primary/10 transition-colors">
                     <Plus className="h-4 w-4" />
                   </div>
-                  <span className="font-medium text-sm">Tambah Kumpulan Baru</span>
+                  <span className="font-medium text-sm">{t("guests.addNewGroup")}</span>
                 </button>
               </div>
             </div>

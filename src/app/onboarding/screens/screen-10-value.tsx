@@ -5,11 +5,14 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
-import { Share2, Copy, Check } from "lucide-react";
-import { Rock_3D } from "next/font/google";
+import { Share2, Check } from "lucide-react";
+import { useLanguage, useT } from "@/lib/i18n/language-context";
 
 export default function Screen10Value() {
   const { state, completeOnboarding } = useOnboarding();
+  const t = useT();
+  const { lang } = useLanguage();
+  const numLocale = lang === "ms" ? "ms-MY" : "en-GB";
   const [copiedLink, setCopiedLink] = useState(false);
 
   const totalBudget = 50000;
@@ -18,12 +21,12 @@ export default function Screen10Value() {
   const expenses = state.demoExpenses;
 
   const handleShare = async () => {
-    const text = `Sayang, ini budget majlis kita. I guna JomKahwin je untuk kita organize everything <3 ${window.location.origin}`;
+    const text = t("onb.s10.shareText", { url: window.location.origin });
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Bajet Majlis Kita!",
+          title: t("onb.s10.shareTitle"),
           text: text,
         });
       } catch (e) {
@@ -62,10 +65,10 @@ export default function Screen10Value() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Ini lah bajet majlis korang!
+            {t("onb.s10.title")}
           </h1>
           <p className="text-muted-foreground">
-            Simpan, share kat partner, atau customize nanti.
+            {t("onb.s10.subtitle")}
           </p>
         </div>
 
@@ -91,7 +94,7 @@ export default function Screen10Value() {
                   <div className="flex items-center justify-between text-sm">
                     <p className="font-medium text-foreground">{expense.category}</p>
                     <p className="text-primary font-bold">
-                      RM {expense.amount.toLocaleString("en-MY")}
+                      RM {expense.amount.toLocaleString(numLocale)}
                     </p>
                   </div>
                   <div className="w-full h-2 bg-muted-foreground/10 rounded-full overflow-hidden">
@@ -113,21 +116,21 @@ export default function Screen10Value() {
           {/* Summary */}
           <div className="border-t border-border pt-3 space-y-2">
             <div className="flex justify-between text-sm">
-              <p className="text-muted-foreground">Total Expenses</p>
+              <p className="text-muted-foreground">{t("onb.s10.totalExpenses")}</p>
               <p className="font-bold text-foreground">
-                RM {totalExpenses.toLocaleString("en-MY")}
+                RM {totalExpenses.toLocaleString(numLocale)}
               </p>
             </div>
             <div className="flex justify-between text-sm">
-              <p className="text-muted-foreground">Your Budget</p>
+              <p className="text-muted-foreground">{t("onb.s10.yourBudget")}</p>
               <p className="font-bold text-foreground">
-                RM {totalBudget.toLocaleString("en-MY")}
+                RM {totalBudget.toLocaleString(numLocale)}
               </p>
             </div>
             <div className="flex justify-between text-base font-bold bg-primary/5 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
-              <p className="text-foreground">Remaining</p>
+              <p className="text-foreground">{t("onb.s10.remaining")}</p>
               <p className={remaining >= 0 ? "text-green-600" : "text-red-600"}>
-                RM {remaining.toLocaleString("en-MY")} ✓
+                RM {remaining.toLocaleString(numLocale)} ✓
               </p>
             </div>
           </div>
@@ -140,7 +143,7 @@ export default function Screen10Value() {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="text-sm text-muted-foreground"
         >
-          Masih ada RM {remaining.toLocaleString("en-MY")} for other categories. Good start! Sekarang share kat pasangan atau mula add vendors.
+          {t("onb.s10.message", { amount: remaining.toLocaleString(numLocale) })}
         </motion.p>
 
         {/* Spacer */}
@@ -156,16 +159,16 @@ export default function Screen10Value() {
           >
             {copiedLink ? (
               <>
-                <Check className="w-4 h-4 mr-2" /> Copied!
+                <Check className="w-4 h-4 mr-2" /> {t("onb.s10.copied")}
               </>
             ) : (
               <>
-                <Share2 className="w-4 h-4 mr-2" /> Share dengan partner! 💖
+                <Share2 className="w-4 h-4 mr-2" /> {t("onb.s10.share")}
               </>
             )}
           </Button>
           <Button size="lg" className="w-full" onClick={handleContinue}>
-            Lihat Dashboard!
+            {t("onb.s10.dashboard")}
           </Button>
         </div>
       </motion.div>

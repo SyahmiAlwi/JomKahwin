@@ -8,11 +8,15 @@ import { useOnboarding } from "@/lib/contexts/onboarding-context";
 import { BUDGET_CATEGORIES, DEFAULT_BUDGET_AMOUNTS } from "@/lib/onboarding-utils";
 import { ProgressBar } from "@/components/onboarding/progress-bar";
 import { Check } from "lucide-react";
+import { useLanguage, useT } from "@/lib/i18n/language-context";
 
-type BudgetItem = { id: string; emoji: string; label: string; amount: number };
+type BudgetItem = { id: string; emoji: string; labelKey: string; amount: number };
 
 export default function Screen9Demo() {
   const { setDemoExpenses, nextScreen } = useOnboarding();
+  const t = useT();
+  const { lang } = useLanguage();
+  const numLocale = lang === "ms" ? "ms-MY" : "en-GB";
   const [selected, setSelected] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, number>>({});
 
@@ -43,7 +47,7 @@ export default function Screen9Demo() {
     const expenses = selected.map((id) => {
       const cat = BUDGET_CATEGORIES.find((c) => c.id === id);
       return {
-        category: cat?.label || id,
+        category: cat ? t(cat.labelKey) : id,
         amount: amounts[id] || 0,
       };
     });
@@ -79,10 +83,10 @@ export default function Screen9Demo() {
         {/* Headline */}
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Okjom tambah expenses majlis korang
+            {t("onb.s9.title")}
           </h1>
           <p className="text-muted-foreground">
-            Pick 3 categories to start. We'll auto-calculate the total.
+            {t("onb.s9.subtitle")}
           </p>
         </div>
 
@@ -105,7 +109,7 @@ export default function Screen9Demo() {
                 >
                   <div className="text-2xl mb-1">{cat.emoji}</div>
                   <p className="text-xs font-medium text-foreground line-clamp-2">
-                    {cat.label}
+                    {t(cat.labelKey)}
                   </p>
                 </motion.button>
               ))}
@@ -117,7 +121,7 @@ export default function Screen9Demo() {
         {selected.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm font-medium text-muted-foreground">
-              Edit amounts (pick {Math.max(0, 3 - selected.length)} more)
+              {t("onb.s9.editAmounts", { count: Math.max(0, 3 - selected.length) })}
             </p>
             {selectedCategories.map((item) => (
               <motion.div
@@ -130,7 +134,7 @@ export default function Screen9Demo() {
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{item.emoji}</span>
                   <p className="font-medium text-sm text-foreground flex-1">
-                    {item.label}
+                    {t(item.labelKey)}
                   </p>
                   {selected.includes(item.id) && (
                     <Check className="w-4 h-4 text-primary" />
@@ -139,21 +143,20 @@ export default function Screen9Demo() {
                 <Input
                   type="text"
                   placeholder="RM 0"
-                  value={amounts[item.id]?.toLocaleString("en-MY") || ""}
+                  value={amounts[item.id]?.toLocaleString(numLocale) || ""}
                   onChange={(e) => handleAmountChange(item.id, e.target.value)}
                   className="text-right"
                 />
               </motion.div>
             ))}
 
-            {/* Add More Button */}
             {selected.length < 3 && (
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => setSelected([])}
               >
-                Change Categories
+                {t("onb.s9.changeCategories")}
               </Button>
             )}
           </div>
@@ -170,9 +173,9 @@ export default function Screen9Demo() {
             {/* Progress Bar */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs font-medium">
-                <span>Spent</span>
+                <span>{t("onb.s9.spent")}</span>
                 <span>
-                  {totalExpenses.toLocaleString("en-MY")} / {totalBudget.toLocaleString("en-MY")}
+                  {totalExpenses.toLocaleString(numLocale)} / {totalBudget.toLocaleString(numLocale)}
                 </span>
               </div>
               <div className="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
@@ -190,15 +193,15 @@ export default function Screen9Demo() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-muted-foreground text-xs">Total Expenses</p>
+                <p className="text-muted-foreground text-xs">{t("onb.s9.totalExpenses")}</p>
                 <p className="font-bold text-primary">
-                  RM {totalExpenses.toLocaleString("en-MY")}
+                  RM {totalExpenses.toLocaleString(numLocale)}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Remaining</p>
+                <p className="text-muted-foreground text-xs">{t("onb.s9.remaining")}</p>
                 <p className={`font-bold ${remaining >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  RM {remaining.toLocaleString("en-MY")}
+                  RM {remaining.toLocaleString(numLocale)}
                 </p>
               </div>
             </div>
@@ -215,7 +218,7 @@ export default function Screen9Demo() {
           onClick={handleContinue}
           disabled={selected.length === 0}
         >
-          Lihat Ringkasan
+          {t("onb.s9.viewSummary")}
         </Button>
       </motion.div>
     </div>

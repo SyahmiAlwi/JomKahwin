@@ -17,6 +17,7 @@ import {
     type Vendor, type VendorInput,
 } from "@/lib/supabase/queries/vendors";
 import { useBudgetCategories } from "@/lib/supabase/queries/budget";
+import { useLanguage, useT } from "@/lib/i18n/language-context";
 
 type Category = "Katering" | "Fotografi" | "Videografi" | "Dekorasi" | "Busana" | "Pelamin" | "Hiburan" | "Lain-lain";
 type Status = "Booked" | "Contacted" | "Shortlisted";
@@ -45,10 +46,10 @@ const CATEGORY_COLORS: Record<Category, string> = {
     "Lain-lain": "bg-slate-50 text-slate-700 border-slate-200",
 };
 
-const STATUS_STYLES: Record<Status, { badge: string; icon: React.ElementType; label: string }> = {
-    Booked:      { badge: "bg-green-100 text-green-700",  icon: CheckCircle2, label: "Ditempah" },
-    Contacted:   { badge: "bg-blue-100 text-blue-700",    icon: Clock,        label: "Dihubungi" },
-    Shortlisted: { badge: "bg-amber-100 text-amber-700",  icon: Star,         label: "Senarai Pendek" },
+const STATUS_STYLES: Record<Status, { badge: string; icon: React.ElementType }> = {
+    Booked:      { badge: "bg-green-100 text-green-700",  icon: CheckCircle2 },
+    Contacted:   { badge: "bg-blue-100 text-blue-700",    icon: Clock },
+    Shortlisted: { badge: "bg-amber-100 text-amber-700",  icon: Star },
 };
 
 const EMPTY_FORM: {
@@ -75,6 +76,9 @@ export default function SuppliersPage() {
     const { isLoading: weddingLoading } = useWedding();
     const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
     const { data: budgetCategories = [] } = useBudgetCategories();
+    const { lang } = useLanguage();
+    const t = useT();
+    const numLocale = lang === "en" ? "en-GB" : "ms-MY";
 
     const addVendorMutation    = useAddVendor();
     const updateVendorMutation = useUpdateVendor();
@@ -134,25 +138,25 @@ export default function SuppliersPage() {
         try {
             if (editingVendorId) {
                 await updateVendorMutation.mutateAsync({ id: editingVendorId, ...entry });
-                toast({ title: "Dikemaskini!", description: "Maklumat pembekal dikemaskini.", variant: "success" });
+                toast({ title: t("common.success"), description: t("vendors.updatedToast"), variant: "success" });
             } else {
                 await addVendorMutation.mutateAsync(entry);
-                toast({ title: "Berjaya!", description: "Pembekal baru ditambah.", variant: "success" });
+                toast({ title: t("common.success"), description: t("vendors.addedToast"), variant: "success" });
             }
             setIsDialogOpen(false);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Ralat", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.error");
+            toast({ title: t("common.error"), description: msg, variant: "error" });
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Pasti mahu buang pembekal ini?")) return;
+        if (!confirm(t("vendors.confirmDelete"))) return;
         try {
             await deleteVendorMutation.mutateAsync(id);
-            toast({ title: "Dipadam", description: "Pembekal telah dibuang.", variant: "success" });
+            toast({ title: t("common.success"), description: t("vendors.deletedToast"), variant: "success" });
         } catch {
-            toast({ title: "Ralat", description: "Gagal membuang pembekal.", variant: "error" });
+            toast({ title: t("common.error"), description: t("vendors.deleteFail"), variant: "error" });
         }
     };
 
@@ -171,12 +175,12 @@ export default function SuppliersPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-heading font-bold text-foreground">Pembekal &amp; Vendor</h1>
-                    <p className="text-muted-foreground text-sm">Urus semua vendor dan pembekal perkahwinan anda.</p>
+                    <h1 className="text-3xl font-heading font-bold text-foreground">{t("vendors.title")}</h1>
+                    <p className="text-muted-foreground text-sm">{t("vendors.subtitle")}</p>
                 </div>
                 <Button onClick={openAdd} className="w-fit">
                     <Plus className="h-4 w-4 mr-2" />
-                    Tambah Pembekal
+                    {t("vendors.addButton")}
                 </Button>
             </div>
 
@@ -192,34 +196,34 @@ export default function SuppliersPage() {
                     </div>
                     <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                         <div className="space-y-3">
-                            <p className="text-white/80 font-medium text-sm uppercase tracking-wider">Ringkasan Pembayaran</p>
+                            <p className="text-white/80 font-medium text-sm uppercase tracking-wider">{t("vendors.summary")}</p>
                             <div className="flex items-baseline gap-2">
-                                <h2 className="text-4xl font-bold text-white">RM {totalPaid.toLocaleString()}</h2>
-                                <span className="text-white/70 text-sm">dibayar</span>
+                                <h2 className="text-4xl font-bold text-white">RM {totalPaid.toLocaleString(numLocale)}</h2>
+                                <span className="text-white/70 text-sm">{t("vendors.paid")}</span>
                             </div>
                             <div className="space-y-1 text-white/80 text-sm">
                                 <div className="flex items-center gap-2">
                                     <DollarSign className="h-4 w-4 opacity-75" />
-                                    <span>Anggaran Total: RM {totalEstimated.toLocaleString()}</span>
+                                    <span>{t("vendors.estimateTotal", { amount: totalEstimated.toLocaleString(numLocale) })}</span>
                                 </div>
                                 <div className="flex items-center gap-2 font-bold text-white">
                                     <TrendingUp className="h-4 w-4" />
-                                    <span>Baki: RM {(totalEstimated - totalPaid).toLocaleString()}</span>
+                                    <span>{t("budget.balance", { amount: (totalEstimated - totalPaid).toLocaleString(numLocale) })}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-4 md:justify-end">
                             <div className="bg-white/20 rounded-2xl px-5 py-4 text-center">
                                 <p className="text-3xl font-bold text-white">{vendors.length}</p>
-                                <p className="text-white/70 text-xs mt-0.5">Jumlah Vendor</p>
+                                <p className="text-white/70 text-xs mt-0.5">{t("vendors.totalVendors")}</p>
                             </div>
                             <div className="bg-white/20 rounded-2xl px-5 py-4 text-center">
                                 <p className="text-3xl font-bold text-white">{bookedCount}</p>
-                                <p className="text-white/70 text-xs mt-0.5">Ditempah</p>
+                                <p className="text-white/70 text-xs mt-0.5">{t("vendors.booked")}</p>
                             </div>
                             <div className="bg-white/20 rounded-2xl px-5 py-4 text-center">
                                 <p className="text-3xl font-bold text-white">{paidPct}%</p>
-                                <p className="text-white/70 text-xs mt-0.5">Dibayar</p>
+                                <p className="text-white/70 text-xs mt-0.5">{t("vendors.paidPct")}</p>
                             </div>
                         </div>
                     </div>
@@ -227,7 +231,7 @@ export default function SuppliersPage() {
                     {/* Progress bar */}
                     <div className="relative z-10 mt-6">
                         <div className="flex justify-between text-white/70 text-xs mb-1.5">
-                            <span>Jumlah dibayar</span>
+                            <span>{t("vendors.totalPaid")}</span>
                             <span>{paidPct}%</span>
                         </div>
                         <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -249,7 +253,7 @@ export default function SuppliersPage() {
                     <Input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Cari nama pembekal..."
+                        placeholder={t("vendors.searchPlaceholder")}
                         className="pl-10"
                     />
                 </div>
@@ -265,7 +269,7 @@ export default function SuppliersPage() {
                             }`}
                         >
                             {cat !== "Semua" && <span className="mr-1">{CATEGORY_ICONS[cat as Category]}</span>}
-                            {cat}
+                            {cat === "Semua" ? t("common.all") : t(`vendorCat.${cat}`)}
                         </button>
                     ))}
                 </div>
@@ -302,13 +306,13 @@ export default function SuppliersPage() {
                                             <div className="min-w-0">
                                                 <p className="font-bold text-foreground truncate">{vendor.name}</p>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${catStyle}`}>
-                                                    {vendor.category}
+                                                    {t(`vendorCat.${vendor.category as Category}`)}
                                                 </span>
                                             </div>
                                         </div>
                                         <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusStyle.badge}`}>
                                             <StatusIcon className="h-3 w-3" />
-                                            {statusStyle.label}
+                                            {t(`vendorStatus.${vendor.status as Status}`)}
                                         </span>
                                     </div>
 
@@ -316,12 +320,12 @@ export default function SuppliersPage() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <div className="space-y-0.5">
-                                                <p className="text-xs text-muted-foreground">Anggaran Harga</p>
-                                                <p className="font-bold text-foreground">RM {vendor.estimated_price.toLocaleString()}</p>
+                                                <p className="text-xs text-muted-foreground">{t("vendors.field.estimatedPrice")}</p>
+                                                <p className="font-bold text-foreground">RM {vendor.estimated_price.toLocaleString(numLocale)}</p>
                                             </div>
                                             <div className="text-right space-y-0.5">
-                                                <p className="text-xs text-muted-foreground">Jumlah Dibayar</p>
-                                                <p className="font-bold text-green-600">RM {vendor.amount_paid.toLocaleString()}</p>
+                                                <p className="text-xs text-muted-foreground">{t("vendors.field.amountPaid")}</p>
+                                                <p className="font-bold text-green-600">RM {vendor.amount_paid.toLocaleString(numLocale)}</p>
                                             </div>
                                         </div>
                                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -332,14 +336,14 @@ export default function SuppliersPage() {
                                                 transition={{ duration: 0.8, delay: index * 0.05 }}
                                             />
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{vendorPaidPct}% dibayar</p>
+                                        <p className="text-xs text-muted-foreground">{vendorPaidPct}{t("vendors.pct")}</p>
                                     </div>
 
                                     {/* Budget link badge */}
                                     {linkedBudgetCat && (
                                         <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-2.5 py-1.5">
                                             <Link2 className="h-3 w-3 shrink-0" />
-                                            <span>Bajet: <span className="font-semibold">{linkedBudgetCat.name}</span></span>
+                                            <span>{t("vendors.budgetLink", { name: linkedBudgetCat.name })}</span>
                                         </div>
                                     )}
 
@@ -367,7 +371,7 @@ export default function SuppliersPage() {
                                             className="flex-1 border-border/50 hover:bg-primary/5 hover:border-primary/30 text-xs h-8"
                                         >
                                             <Edit3 className="h-3.5 w-3.5 mr-1" />
-                                            Edit
+                                            {t("common.edit")}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -389,9 +393,9 @@ export default function SuppliersPage() {
                     <div className="col-span-full">
                         <Card className="p-10 text-center border-border/50">
                             <Store className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                            <p className="font-medium text-foreground">Tiada pembekal dijumpai</p>
+                            <p className="font-medium text-foreground">{t("vendors.noResults")}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                                {search ? `Tiada hasil untuk "${search}"` : "Tekan 'Tambah Pembekal' untuk mulakan."}
+                                {search ? t("vendors.noResultsFor", { term: search }) : t("vendors.pressToStart")}
                             </p>
                         </Card>
                     </div>
@@ -402,44 +406,44 @@ export default function SuppliersPage() {
             <Dialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
-                title={editingVendorId ? "Kemaskini Pembekal" : "Tambah Pembekal Baru"}
+                title={editingVendorId ? t("vendors.dialog.editTitle") : t("vendors.dialog.addTitle")}
             >
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Nama Pembekal / Syarikat</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("vendors.form.name")}</label>
                         <Input
                             value={form.name}
                             onChange={e => setForm({ ...form, name: e.target.value })}
-                            placeholder="Contoh: Studio Kenangan Abadi"
+                            placeholder={t("vendors.form.namePlaceholder")}
                             required
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-sm font-medium text-foreground mb-1 block">Kategori Vendor</label>
+                            <label className="text-sm font-medium text-foreground mb-1 block">{t("vendors.form.category")}</label>
                             <select
                                 value={form.category}
                                 onChange={e => setForm({ ...form, category: e.target.value as Category })}
                                 className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             >
-                                {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
+                                {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {t(`vendorCat.${c}`)}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm font-medium text-foreground mb-1 block">Status</label>
+                            <label className="text-sm font-medium text-foreground mb-1 block">{t("vendors.form.status")}</label>
                             <select
                                 value={form.status}
                                 onChange={e => setForm({ ...form, status: e.target.value as Status })}
                                 className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             >
-                                <option value="Shortlisted">Senarai Pendek</option>
-                                <option value="Contacted">Dihubungi</option>
-                                <option value="Booked">Ditempah</option>
+                                <option value="Shortlisted">{t("vendorStatus.Shortlisted")}</option>
+                                <option value="Contacted">{t("vendorStatus.Contacted")}</option>
+                                <option value="Booked">{t("vendorStatus.Booked")}</option>
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">No. Telefon</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("vendors.form.phone")}</label>
                         <Input
                             value={form.phone}
                             onChange={e => setForm({ ...form, phone: e.target.value })}
@@ -450,7 +454,7 @@ export default function SuppliersPage() {
                         <div>
                             <label className="text-sm font-medium text-foreground mb-1 block">
                                 <Wallet className="inline h-3.5 w-3.5 mr-1" />
-                                Anggaran Harga (RM)
+                                {t("vendors.form.estimated")}
                             </label>
                             <Input
                                 type="number"
@@ -463,7 +467,7 @@ export default function SuppliersPage() {
                         <div>
                             <label className="text-sm font-medium text-foreground mb-1 block">
                                 <CheckCircle2 className="inline h-3.5 w-3.5 mr-1 text-green-600" />
-                                Jumlah Dibayar (RM)
+                                {t("vendors.form.paid")}
                             </label>
                             <Input
                                 type="number"
@@ -479,32 +483,32 @@ export default function SuppliersPage() {
                     <div>
                         <label className="text-sm font-medium text-foreground mb-1 block">
                             <Link2 className="inline h-3.5 w-3.5 mr-1 text-primary" />
-                            Kaitkan ke Kategori Bajet
-                            <span className="ml-1 text-muted-foreground font-normal">(pilihan)</span>
+                            {t("vendors.form.budgetLink")}
+                            <span className="ml-1 text-muted-foreground font-normal">{t("vendors.form.optional")}</span>
                         </label>
                         <select
                             value={form.budget_category_id}
                             onChange={e => setForm({ ...form, budget_category_id: e.target.value })}
                             className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                            <option value="">-- Tiada (tidak dikaitkan) --</option>
+                            <option value="">{t("vendors.form.budgetLinkNone")}</option>
                             {budgetCategories.map(c => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
                         {form.budget_category_id && (
                             <p className="text-xs text-primary mt-1">
-                                💡 Jumlah dibayar akan reflect dalam kiraan bajet kategori ini.
+                                {t("vendors.form.budgetLinkHint")}
                             </p>
                         )}
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Nota</label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">{t("vendors.form.notes")}</label>
                         <Input
                             value={form.notes}
                             onChange={e => setForm({ ...form, notes: e.target.value })}
-                            placeholder="Sebarang nota tambahan..."
+                            placeholder={t("vendors.form.notesPlaceholder")}
                         />
                     </div>
                     <Button
@@ -512,7 +516,7 @@ export default function SuppliersPage() {
                         disabled={isSaving}
                         className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                        {isSaving ? "Menyimpan..." : editingVendorId ? "Kemaskini Pembekal" : "Tambah Pembekal"}
+                        {isSaving ? t("common.saving") : editingVendorId ? t("vendors.form.submitEdit") : t("vendors.form.submitAdd")}
                     </Button>
                 </form>
             </Dialog>

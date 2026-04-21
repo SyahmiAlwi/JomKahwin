@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,19 +14,20 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Bell, Lock, Globe, LogOut, ChevronRight, Moon, Copy, Check, RefreshCw, UserPlus, Users2 } from "lucide-react";
+import { Bell, Lock, Globe, LogOut, ChevronRight, Moon, Copy, Check, RefreshCw, UserPlus, Users2, Clock, XCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/components/providers/user-provider";
 import { useWedding } from "@/components/providers/wedding-provider";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/language-context";
+import type { LangCode } from "@/lib/i18n/translations";
 
 const LANGUAGES = [
-    { value: "ms", label: "Bahasa Melayu" },
-    { value: "en", label: "English" },
+    { value: "ms", labelKey: "language.ms" },
+    { value: "en", labelKey: "language.en" },
 ] as const;
 
 const LS_NOTIFICATIONS = "jomkahwin_notifications";
-const LS_LANGUAGE = "jomkahwin_language";
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -34,17 +35,15 @@ export default function SettingsPage() {
     const { user } = useUser();
     const { weddingId, inviteCode, members, isLoading: weddingLoading, refreshWedding } = useWedding();
     const supabase = createClient();
+    const { lang, setLang, t } = useLanguage();
 
-    // ── Local prefs (hydrated from localStorage) ─────────────
+    // ── Local prefs ──────────────────────────────────────────
     const [notifications, setNotifications] = useState(true);
-    const [language, setLanguage] = useState("ms");
     const [langMenuOpen, setLangMenuOpen] = useState(false);
 
     useEffect(() => {
         const savedNotif = localStorage.getItem(LS_NOTIFICATIONS);
         if (savedNotif !== null) setNotifications(savedNotif === "true");
-        const savedLang = localStorage.getItem(LS_LANGUAGE);
-        if (savedLang) setLanguage(savedLang);
     }, []);
 
     const handleNotificationToggle = (checked: boolean) => {
@@ -52,14 +51,13 @@ export default function SettingsPage() {
         localStorage.setItem(LS_NOTIFICATIONS, String(checked));
     };
 
-    const handleLanguageChange = (val: string) => {
-        setLanguage(val);
-        localStorage.setItem(LS_LANGUAGE, val);
+    const handleLanguageChange = (val: LangCode) => {
+        setLang(val);
         setLangMenuOpen(false);
-        toast({ title: "Bahasa dikemaskini.", variant: "default" });
+        toast({ title: t("settings.languageUpdated"), variant: "default" });
     };
 
-    // ── Edit profile dialog ───────────────────────────────────
+    // ── Edit profile dialog ──────────────────────────────────
     const [editOpen, setEditOpen] = useState(false);
     const [editName, setEditName] = useState("");
     const [editLoading, setEditLoading] = useState(false);
@@ -71,7 +69,7 @@ export default function SettingsPage() {
 
     const handleSaveProfile = async () => {
         if (!editName.trim()) {
-            toast({ title: "Nama tidak boleh kosong.", variant: "error" });
+            toast({ title: t("settings.editName.empty"), variant: "error" });
             return;
         }
         setEditLoading(true);
@@ -80,11 +78,11 @@ export default function SettingsPage() {
                 data: { full_name: editName.trim() },
             });
             if (error) throw error;
-            toast({ title: "Profil dikemaskini!", variant: "default" });
+            toast({ title: t("settings.profileUpdated"), variant: "default" });
             setEditOpen(false);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Gagal mengemaskini profil", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("settings.profileUpdateFail"), description: msg, variant: "error" });
         } finally {
             setEditLoading(false);
         }
@@ -96,15 +94,69 @@ export default function SettingsPage() {
     const [joining, setJoining] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
 
+    type JoinRequest = { id: string; requester_id: string; requester_name: string; status: string; created_at: string };
+    const [incomingRequests, setIncomingRequests] = useState<JoinRequest[]>([]);
+    const [myRequestStatus, setMyRequestStatus] = useState<"none" | "pending" | "accepted" | "rejected">("none");
+    const [respondingId, setRespondingId] = useState<string | null>(null);
+
+    const fetchJoinRequests = useCallback(async () => {
+        if (!weddingId) return;
+        try {
+            const { data } = await supabase.rpc("get_join_requests");
+            if (data) setIncomingRequests(data as JoinRequest[]);
+        } catch { /* non-fatal */ }
+    }, [supabase, weddingId]);
+
+    useEffect(() => { fetchJoinRequests(); }, [fetchJoinRequests]);
+
+    useEffect(() => {
+        if (!weddingId) return;
+        const channel = supabase
+            .channel("join-requests")
+            .on("postgres_changes", {
+                event: "*",
+                schema: "public",
+                table: "wedding_join_requests",
+            }, () => {
+                fetchJoinRequests();
+                refreshWedding();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [supabase, weddingId, fetchJoinRequests, refreshWedding]);
+
+    const handleRespondRequest = async (requestId: string, action: "accept" | "reject") => {
+        setRespondingId(requestId);
+        try {
+            const { error } = await supabase.rpc("respond_to_join_request", {
+                p_request_id: requestId,
+                p_action: action,
+            });
+            if (error) throw error;
+            toast({
+                title: action === "accept" ? t("settings.accepted") : t("settings.requestRejectedShort"),
+                description: action === "accept" ? t("settings.memberAdded") : t("settings.requestRejectedDesc"),
+                variant: action === "accept" ? "success" : "default",
+            });
+            await fetchJoinRequests();
+            if (action === "accept") await refreshWedding();
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("settings.respondFail"), description: msg, variant: "error" });
+        } finally {
+            setRespondingId(null);
+        }
+    };
+
     const handleCopyCode = async () => {
         if (!inviteCode) return;
         try {
             await navigator.clipboard.writeText(inviteCode);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-            toast({ title: "Kod disalin!", variant: "default" });
+            toast({ title: t("settings.codeCopied"), variant: "default" });
         } catch {
-            toast({ title: "Gagal menyalin kod.", variant: "error" });
+            toast({ title: t("settings.codeCopyFail"), variant: "error" });
         }
     };
 
@@ -112,14 +164,18 @@ export default function SettingsPage() {
         if (!joinCode.trim()) return;
         setJoining(true);
         try {
-            const { error } = await supabase.rpc("join_wedding_by_code", { code: joinCode.trim().toLowerCase() });
-            if (error) throw error;
-            toast({ title: "Berjaya menyertai!", description: "Anda kini berkongsi perkahwinan.", variant: "default" });
+            const result = await supabase.rpc("join_wedding_by_code", { code: joinCode.trim().toLowerCase() });
+            if (result.error) throw result.error;
+            toast({
+                title: t("settings.joinRequestSent"),
+                description: t("settings.joinRequestSentBody"),
+                variant: "default",
+            });
             setJoinCode("");
-            await refreshWedding();
+            setMyRequestStatus("pending");
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Kod tidak sah atau anda sudah menjadi ahli.";
-            toast({ title: "Gagal menyertai", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("settings.joinFailInvalid");
+            toast({ title: t("settings.joinFail"), description: msg, variant: "error" });
         } finally {
             setJoining(false);
         }
@@ -131,10 +187,10 @@ export default function SettingsPage() {
             const { error } = await supabase.rpc("regenerate_invite_code");
             if (error) throw error;
             await refreshWedding();
-            toast({ title: "Kod baru dijana!", variant: "default" });
+            toast({ title: t("settings.newCodeGenerated"), variant: "default" });
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Gagal jana kod", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("settings.regenerateFail"), description: msg, variant: "error" });
         } finally {
             setRegenerating(false);
         }
@@ -149,8 +205,8 @@ export default function SettingsPage() {
             await supabase.auth.signOut();
             router.push("/login");
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Gagal log keluar", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("settings.signOutFail"), description: msg, variant: "error" });
             setSigningOut(false);
         }
     };
@@ -161,7 +217,7 @@ export default function SettingsPage() {
     const handlePasswordReset = async () => {
         const email = user?.email;
         if (!email) {
-            toast({ title: "E-mel tidak dijumpai.", variant: "error" });
+            toast({ title: t("settings.emailNotFound"), variant: "error" });
             return;
         }
         setResetLoading(true);
@@ -171,13 +227,13 @@ export default function SettingsPage() {
             });
             if (error) throw error;
             toast({
-                title: "E-mel dihantar!",
-                description: `Semak peti masuk anda di ${email}.`,
+                title: t("settings.emailSent"),
+                description: t("settings.emailSentBody", { email }),
                 variant: "default",
             });
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Sila cuba lagi.";
-            toast({ title: "Gagal menghantar e-mel", description: msg, variant: "error" });
+            const msg = err instanceof Error ? err.message : t("common.tryAgain");
+            toast({ title: t("settings.sendEmailFail"), description: msg, variant: "error" });
         } finally {
             setResetLoading(false);
         }
@@ -187,18 +243,17 @@ export default function SettingsPage() {
     const displayName =
         user?.user_metadata?.full_name ??
         user?.email?.split("@")[0] ??
-        "Pengguna";
+        t("common.user");
     const displayEmail = user?.email ?? "–";
     const initials = displayName.charAt(0).toUpperCase();
-    const currentLangLabel =
-        LANGUAGES.find((l) => l.value === language)?.label ?? "Bahasa Melayu";
+    const currentLangLabel = t(LANGUAGES.find((l) => l.value === lang)?.labelKey ?? "language.ms");
+    const dateLocale = lang === "en" ? "en-GB" : "ms-MY";
 
     return (
         <div className="space-y-8 pb-24">
-            {/* Header */}
             <div>
-                <h1 className="text-3xl font-heading font-bold text-foreground">Tetapan</h1>
-                <p className="text-muted-foreground text-sm">Urus profil dan pilihan aplikasi anda.</p>
+                <h1 className="text-3xl font-heading font-bold text-foreground">{t("settings.title")}</h1>
+                <p className="text-muted-foreground text-sm">{t("settings.subtitle")}</p>
             </div>
 
             {/* Profile Hero Card */}
@@ -223,7 +278,7 @@ export default function SettingsPage() {
                         onClick={openEditDialog}
                         className="shrink-0 bg-white/15 hover:bg-white/25 text-white border-white/20 backdrop-blur-sm"
                     >
-                        Edit Profil
+                        {t("settings.editProfile")}
                     </Button>
                 </div>
             </div>
@@ -232,15 +287,14 @@ export default function SettingsPage() {
             <div className="space-y-6">
                 {/* App Settings */}
                 <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Aplikasi</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">{t("settings.section.app")}</h4>
                     <Card className="divide-y divide-border overflow-hidden border-border p-0">
-                        {/* Notifications */}
                         <div className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
                                     <Bell className="h-4 w-4" />
                                 </div>
-                                <span className="font-medium text-foreground">Notifikasi</span>
+                                <span className="font-medium text-foreground">{t("settings.notifications")}</span>
                             </div>
                             <Switch
                                 checked={notifications}
@@ -248,7 +302,6 @@ export default function SettingsPage() {
                             />
                         </div>
 
-                        {/* Language */}
                         <div
                             className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors cursor-pointer relative"
                             onClick={() => setLangMenuOpen((o) => !o)}
@@ -257,44 +310,42 @@ export default function SettingsPage() {
                                 <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
                                     <Globe className="h-4 w-4" />
                                 </div>
-                                <span className="font-medium text-foreground">Bahasa</span>
+                                <span className="font-medium text-foreground">{t("settings.language")}</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                                 <span className="text-sm">{currentLangLabel}</span>
                                 <ChevronRight className={`h-4 w-4 transition-transform ${langMenuOpen ? "rotate-90" : ""}`} />
                             </div>
 
-                            {/* Inline language picker */}
                             {langMenuOpen && (
                                 <div className="absolute right-4 top-full mt-1 z-10 bg-popover border border-border rounded-xl shadow-md overflow-hidden min-w-[160px]">
-                                    {LANGUAGES.map((lang) => (
+                                    {LANGUAGES.map((l) => (
                                         <button
-                                            key={lang.value}
+                                            key={l.value}
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleLanguageChange(lang.value);
+                                                handleLanguageChange(l.value);
                                             }}
                                             className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors ${
-                                                language === lang.value ? "font-semibold text-primary" : "text-foreground"
+                                                lang === l.value ? "font-semibold text-primary" : "text-foreground"
                                             }`}
                                         >
-                                            {lang.label}
+                                            {t(l.labelKey)}
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* Dark mode (disabled) */}
                         <div className="p-4 flex items-center justify-between opacity-50">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                     <Moon className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <span className="font-medium text-foreground">Tema Gelap</span>
-                                    <p className="text-xs text-muted-foreground">Akan datang</p>
+                                    <span className="font-medium text-foreground">{t("settings.darkMode")}</span>
+                                    <p className="text-xs text-muted-foreground">{t("settings.comingSoon")}</p>
                                 </div>
                             </div>
                             <Switch disabled />
@@ -304,7 +355,7 @@ export default function SettingsPage() {
 
                 {/* Collaboration Section */}
                 <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Pasangan & Kerjasama</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">{t("settings.section.collab")}</h4>
                     <Card className="p-6 border-border space-y-5">
                         {weddingLoading ? (
                             <div className="flex items-center justify-center py-6">
@@ -312,11 +363,10 @@ export default function SettingsPage() {
                             </div>
                         ) : (
                             <>
-                                {/* Invite code display */}
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <Users2 className="h-4 w-4 text-primary" />
-                                        <Label className="text-sm font-semibold">Kod Jemputan</Label>
+                                        <Label className="text-sm font-semibold">{t("settings.inviteCode")}</Label>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="flex-1 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -330,7 +380,7 @@ export default function SettingsPage() {
                                                     onClick={handleCopyCode}
                                                     disabled={!inviteCode}
                                                     className="h-8 w-8 text-primary hover:bg-primary/10"
-                                                    title="Salin kod"
+                                                    title={t("settings.copyCode")}
                                                 >
                                                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                                 </Button>
@@ -340,7 +390,7 @@ export default function SettingsPage() {
                                                     onClick={handleRegenerateCode}
                                                     disabled={regenerating}
                                                     className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                                    title="Jana kod baru"
+                                                    title={t("settings.regenerate")}
                                                 >
                                                     <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
                                                 </Button>
@@ -350,21 +400,20 @@ export default function SettingsPage() {
                                     {members.length <= 1 && (
                                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                                             <span>💡</span>
-                                            Kongsi kod ini dengan pasangan anda supaya mereka boleh menyertai perancangan.
+                                            {t("settings.sharePrompt")}
                                         </p>
                                     )}
                                 </div>
 
-                                {/* Members list */}
                                 {members.length > 0 && (
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-semibold">Ahli ({members.length})</Label>
+                                        <Label className="text-sm font-semibold">{t("settings.members", { count: members.length })}</Label>
                                         <div className="space-y-2">
                                             {members.map((member) => {
                                                 const name = member.full_name ?? member.user_id.slice(0, 8);
                                                 const initial = name.charAt(0).toUpperCase();
                                                 const isMe = member.user_id === user?.id;
-                                                const joinedDate = new Date(member.joined_at).toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" });
+                                                const joinedDate = new Date(member.joined_at).toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" });
                                                 return (
                                                     <div key={member.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
                                                         <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
@@ -374,9 +423,9 @@ export default function SettingsPage() {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="font-medium text-foreground text-sm truncate">
-                                                                {name}{isMe && <span className="text-xs text-primary ml-1.5 font-normal">(Anda)</span>}
+                                                                {name}{isMe && <span className="text-xs text-primary ml-1.5 font-normal">({t("common.you")})</span>}
                                                             </p>
-                                                            <p className="text-xs text-muted-foreground">Sertai: {joinedDate}</p>
+                                                            <p className="text-xs text-muted-foreground">{t("settings.joined", { date: joinedDate })}</p>
                                                         </div>
                                                     </div>
                                                 );
@@ -385,30 +434,92 @@ export default function SettingsPage() {
                                     </div>
                                 )}
 
-                                {/* Join with code */}
-                                <div className="space-y-2 pt-2 border-t border-border/50">
+                                <div className="space-y-3 pt-2 border-t border-border/50">
                                     <div className="flex items-center gap-2">
                                         <UserPlus className="h-4 w-4 text-muted-foreground" />
-                                        <Label className="text-sm font-semibold">Sertai Perkahwinan Lain</Label>
+                                        <Label className="text-sm font-semibold">{t("settings.joinOther")}</Label>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            placeholder="Masukkan kod jemputan..."
-                                            value={joinCode}
-                                            onChange={(e) => setJoinCode(e.target.value)}
-                                            onKeyDown={(e) => e.key === "Enter" && handleJoinWedding()}
-                                            maxLength={8}
-                                            className="font-mono tracking-widest"
-                                        />
-                                        <Button
-                                            onClick={handleJoinWedding}
-                                            disabled={joining || !joinCode.trim()}
-                                            className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
-                                        >
-                                            {joining ? "Menyertai…" : "Sertai"}
-                                        </Button>
-                                    </div>
+
+                                    {myRequestStatus === "pending" ? (
+                                        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-medium text-amber-800">{t("settings.requestSent")}</p>
+                                                <p className="text-xs text-amber-600">{t("settings.requestSentBody")}</p>
+                                            </div>
+                                        </div>
+                                    ) : myRequestStatus === "rejected" ? (
+                                        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-medium text-red-700">{t("settings.requestRejected")}</p>
+                                                <p className="text-xs text-red-500">{t("settings.requestRejectedBody")}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder={t("settings.joinCodePlaceholder")}
+                                                value={joinCode}
+                                                onChange={(e) => setJoinCode(e.target.value)}
+                                                onKeyDown={(e) => e.key === "Enter" && handleJoinWedding()}
+                                                maxLength={8}
+                                                className="font-mono tracking-widest"
+                                            />
+                                            <Button
+                                                onClick={handleJoinWedding}
+                                                disabled={joining || !joinCode.trim()}
+                                                className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+                                            >
+                                                {joining ? t("settings.sending") : t("settings.send")}
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {incomingRequests.filter(r => r.status === "pending").length > 0 && (
+                                    <div className="space-y-2 pt-2 border-t border-border/50">
+                                        <Label className="text-sm font-semibold text-orange-700 flex items-center gap-1.5">
+                                            <Clock className="h-3.5 w-3.5" />
+                                            {t("settings.pendingRequests", { count: incomingRequests.filter(r => r.status === "pending").length })}
+                                        </Label>
+                                        <div className="space-y-2">
+                                            {incomingRequests
+                                                .filter(r => r.status === "pending")
+                                                .map(req => (
+                                                    <div key={req.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200">
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-foreground truncate">{req.requester_name ?? t("common.user")}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {new Date(req.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-1.5 shrink-0">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleRespondRequest(req.id, "accept")}
+                                                                disabled={respondingId === req.id}
+                                                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white text-xs"
+                                                            >
+                                                                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                                                {t("settings.accept")}
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleRespondRequest(req.id, "reject")}
+                                                                disabled={respondingId === req.id}
+                                                                className="h-8 px-3 border-red-300 text-red-600 hover:bg-red-50 text-xs"
+                                                            >
+                                                                <XCircle className="h-3.5 w-3.5 mr-1" />
+                                                                {t("settings.reject")}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </Card>
@@ -416,9 +527,8 @@ export default function SettingsPage() {
 
                 {/* Account Settings */}
                 <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">Akaun</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider ml-1">{t("settings.section.account")}</h4>
                     <Card className="divide-y divide-border overflow-hidden border-border p-0">
-                        {/* Change password */}
                         <button
                             type="button"
                             onClick={handlePasswordReset}
@@ -430,13 +540,12 @@ export default function SettingsPage() {
                                     <Lock className="h-4 w-4" />
                                 </div>
                                 <span className="font-medium text-foreground">
-                                    {resetLoading ? "Menghantar e-mel…" : "Tukar Kata Laluan"}
+                                    {resetLoading ? t("settings.sendingEmail") : t("settings.changePassword")}
                                 </span>
                             </div>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </button>
 
-                        {/* Sign out */}
                         <button
                             type="button"
                             onClick={handleSignOut}
@@ -448,7 +557,7 @@ export default function SettingsPage() {
                                     <LogOut className="h-4 w-4" />
                                 </div>
                                 <span className="font-medium text-red-600">
-                                    {signingOut ? "Log Keluar…" : "Log Keluar"}
+                                    {signingOut ? t("settings.signingOut") : t("settings.signOut")}
                                 </span>
                             </div>
                         </button>
@@ -460,24 +569,24 @@ export default function SettingsPage() {
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="font-heading text-xl">Edit Profil</DialogTitle>
+                        <DialogTitle className="font-heading text-xl">{t("settings.editDialog.title")}</DialogTitle>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
                         <div className="space-y-1.5">
-                            <Label htmlFor="profile-name">Nama Penuh</Label>
+                            <Label htmlFor="profile-name">{t("common.fullName")}</Label>
                             <Input
                                 id="profile-name"
-                                placeholder="Nama anda"
+                                placeholder={t("settings.namePlaceholder")}
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSaveProfile()}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label>E-mel</Label>
+                            <Label>{t("common.email")}</Label>
                             <Input value={displayEmail} disabled className="opacity-60 cursor-not-allowed" />
-                            <p className="text-xs text-muted-foreground">E-mel tidak boleh diubah dari sini.</p>
+                            <p className="text-xs text-muted-foreground">{t("settings.emailLocked")}</p>
                         </div>
                     </div>
 
@@ -487,10 +596,10 @@ export default function SettingsPage() {
                             onClick={() => setEditOpen(false)}
                             disabled={editLoading}
                         >
-                            Batal
+                            {t("common.cancel")}
                         </Button>
                         <Button onClick={handleSaveProfile} disabled={editLoading}>
-                            {editLoading ? "Menyimpan…" : "Simpan"}
+                            {editLoading ? t("common.saving") : t("common.save")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
