@@ -66,6 +66,7 @@ const ms: Dict = {
   "nav.budget": "Bajet",
   "nav.vendors": "Vendor",
   "nav.guests": "Senarai Tetamu",
+  "nav.notes": "Nota",
   "nav.activity": "Aktiviti",
   "nav.settings": "Tetapan",
 
@@ -747,6 +748,7 @@ const en: Dict = {
   "nav.budget": "Budget",
   "nav.vendors": "Vendors",
   "nav.guests": "Guest List",
+  "nav.notes": "Notes",
   "nav.activity": "Activity",
   "nav.settings": "Settings",
 

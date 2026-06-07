@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, Calendar, CheckSquare, Wallet, Store, Users, User, Activity } from "lucide-react";
+import { X, Home, Calendar, CheckSquare, Wallet, Store, Users, User, Activity, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/components/providers/user-provider";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
@@ -56,6 +56,7 @@ export function MobileSidebar({
         { icon: Wallet, label: t("nav.budget"), href: "/dashboard/budget" },
         { icon: Store, label: t("nav.vendors"), href: "/dashboard/suppliers" },
         { icon: Users, label: t("nav.guests"), href: "/dashboard/guests" },
+        { icon: StickyNote, label: t("nav.notes"), href: "/dashboard/notes" },
         { icon: Activity, label: t("nav.activity"), href: "/dashboard/activity" },
         { icon: User, label: t("nav.settings"), href: "/dashboard/settings" },
     ];
